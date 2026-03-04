@@ -1,0 +1,49 @@
+[project]
+name = "timecomply"
+version = "0.1.0"
+description = "A DCAA Time Compliance Application"
+requires-python = ">=3.12"
+dependencies = [
+    "django>=5.0",
+    "psycopg[binary]",
+    "django-allauth[socialaccount]",
+    "djangorestframework",
+    "drf-spectacular",
+    "whitenoise",
+    "gunicorn",
+    "django-environ",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest-django",
+    "pytest-cov",
+    "factory-boy",
+    "ruff",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest-django",
+    "pytest-cov",
+    "factory-boy",
+    "ruff",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+testpaths = ["tests"]
