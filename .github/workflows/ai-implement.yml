@@ -14,10 +14,10 @@ jobs:
   implement:
     name: Implement Issue with Claude
     runs-on: ubuntu-latest
-    # Only run when 'ready-for-ai' label is added, or via manual dispatch
+    # Only run when 'task-claude' label is added, or via manual dispatch
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'issues' && github.event.label.name == 'ready-for-ai')
+      (github.event_name == 'issues' && github.event.label.name == 'task-claude')
 
     permissions:
       contents: write
@@ -242,10 +242,10 @@ jobs:
 
           Please review the PR and complete the **Human Testing Notes** before merging."
 
-      - name: Remove ready-for-ai label, add in-review
+      - name: Remove task-claude label, add ai-implemented
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh issue edit "${{ steps.issue.outputs.number }}" \
-            --remove-label "ready-for-ai" \
+            --remove-label "task-claude" \
             --add-label "ai-implemented"

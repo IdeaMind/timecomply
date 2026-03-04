@@ -2,7 +2,7 @@
 name: AI-Implementable Feature
 about: A well-specified feature designed to be implemented by Claude Code via GitHub Actions
 title: "[FEATURE] "
-labels: ["type:feature", "ready-for-ai"]
+labels: ["type:feature", "task-claude"]
 assignees: []
 ---
 

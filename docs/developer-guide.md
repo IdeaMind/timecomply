@@ -134,10 +134,10 @@ uv sync --upgrade
 
 ## AI-Driven Development Workflow
 
-Issues labeled `ready-for-ai` can be implemented automatically via GitHub Actions.
+Issues labeled `task-claude` can be implemented automatically via GitHub Actions.
 
 ### Triggering AI Implementation
-1. Find an issue in the `ready-for-ai` state
+1. Find an issue in the `task-claude` state
 2. The `ai-implement.yml` workflow will pick it up
 3. Claude Code will implement the feature in a new branch
 4. A PR will be opened automatically
