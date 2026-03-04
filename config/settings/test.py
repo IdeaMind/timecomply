@@ -6,12 +6,10 @@ from .base import *  # noqa: F401, F403
 
 DEBUG = True
 
-# Use in-memory SQLite for fast tests
+# Use DATABASE_URL if set (CI/GitHub Actions with Postgres service),
+# otherwise fall back to in-memory SQLite for fast local tests.
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": ":memory:",
-    }
+    "default": env.db("DATABASE_URL", default="sqlite:///:memory:"),  # noqa: F405
 }
 
 # Email backend for tests
