@@ -60,6 +60,9 @@ jobs:
       - name: Install Claude Code CLI
         run: npm install -g @anthropic-ai/claude-code
 
+      - name: Install dependencies
+        run: uv sync --frozen
+
       - name: Get issue details
         id: issue
         env:
@@ -120,10 +123,7 @@ jobs:
           cat /tmp/issue.json >> /tmp/claude-prompt.md
 
           # Run Claude Code with the issue prompt
-          claude --print --no-conversation /tmp/claude-prompt.md
-
-      - name: Install dependencies (for CI validation)
-        run: uv sync --frozen
+          cat /tmp/claude-prompt.md | claude -p --dangerously-skip-permissions
 
       - name: Run lint check
         id: lint
