@@ -25,6 +25,7 @@ PASSWORD_HASHERS = [
 
 # Disable whitenoise in tests
 MIDDLEWARE = [
-    m for m in MIDDLEWARE  # noqa: F405
+    m
+    for m in MIDDLEWARE  # noqa: F405
     if m != "whitenoise.middleware.WhiteNoiseMiddleware"
 ]
