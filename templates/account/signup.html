@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Register — TimeComply{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="column column-40 column-offset-30">
+        <h2>Create Account</h2>
+
+        <form method="post" action="{% url 'account_signup' %}">
+            {% csrf_token %}
+            {{ form.as_p }}
+            {% if redirect_field_value %}
+                <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+            {% endif %}
+            <button type="submit" class="button">Create Account</button>
+        </form>
+
+        <p>
+            Already have an account? <a href="{% url 'account_login' %}">Sign in</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

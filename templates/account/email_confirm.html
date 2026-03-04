@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Confirm Email — TimeComply{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="column column-40 column-offset-30">
+        <h2>Confirm Email Address</h2>
+
+        {% if confirmation %}
+            <p>
+                Please confirm that <strong>{{ confirmation.email_address.email }}</strong>
+                is your email address.
+            </p>
+            <form method="post" action="{% url 'account_confirm_email' confirmation.key %}">
+                {% csrf_token %}
+                <button type="submit" class="button">Confirm Email</button>
+            </form>
+        {% else %}
+            <p>
+                This email confirmation link is invalid or has already been used.
+                Please <a href="{% url 'account_email' %}">request a new confirmation email</a>.
+            </p>
+        {% endif %}
+
+        <p>
+            <a href="{% url 'account_login' %}">Back to sign in</a>
+        </p>
+    </div>
+</div>
+{% endblock %}
