@@ -66,6 +66,8 @@ jobs:
 
       - name: Run tests with coverage
         run: |
+          set +e
           uv run pytest --cov --cov-report=term-missing --cov-fail-under=80
           status=$?
+          set -e
           [ $status -eq 5 ] && exit 0 || exit $status
