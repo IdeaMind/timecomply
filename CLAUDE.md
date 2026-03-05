@@ -69,14 +69,14 @@ templates/
 
 **Authentication:** allauth handles all auth — email/password login, Google Workspace OAuth, and Microsoft 365 OAuth. Do not build custom auth flows. The underlying user is Django's built-in `auth.User` (no custom user model).
 
-**Roles:** Stored as boolean flags on `CompanyMembership`. A user can hold multiple roles simultaneously.
+**Roles:** Stored as `role = CharField(choices=ROLE_CHOICES)` on `CompanyMembership`. A user holds exactly one role. `is_period_manager` is an additive boolean flag that can be set independently of role.
 
-| Role | Flag | Can do |
+| Role | `role` value | Can do |
 |---|---|---|
-| Employee | (base, all members) | Enter and submit their own timesheets |
-| Approver | `is_approver` | Approve/reject timesheets for their reports |
-| Period Manager | `is_period_manager` | Open and close pay periods |
-| Company Admin | `is_company_admin` | Manage users, charge codes, company settings |
+| Employee | `"employee"` | Enter and submit their own timesheets |
+| Approver | `"approver"` | Approve/reject timesheets for their reports |
+| Admin | `"admin"` | Manage users, charge codes, company settings |
+| Period Manager | any role + `is_period_manager=True` | Open and close pay periods |
 
 **Timesheet state machine:** `draft → submitted → approved → locked` (rejected goes back to draft). Never skip states.
 
