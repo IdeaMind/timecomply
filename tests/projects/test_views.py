@@ -19,43 +19,37 @@ def test_project_list_requires_login(client):
 
 
 @pytest.mark.django_db
-def test_project_list_shows_active_projects_to_employees(client):
+def test_project_list_shows_active_not_archived_to_employees(client):
     membership = CompanyMembershipFactory(role="employee")
     company = membership.company
-    active = ProjectFactory(company=company, code="P001", is_active=True)
-    ProjectFactory(company=company, code="P002", is_active=False)
-
-    client.force_login(membership.user)
-    response = client.get("/projects/")
-    assert response.status_code == 200
-    assert active.code in response.content.decode()
-    assert "P002" not in response.content.decode()
-
-
-@pytest.mark.django_db
-def test_project_list_shows_all_projects_to_admins(client):
-    membership = CompanyMembershipFactory(role="admin")
-    company = membership.company
-    active = ProjectFactory(company=company, code="P001", is_active=True)
-    inactive = ProjectFactory(company=company, code="P002", is_active=False)
+    ProjectFactory(company=company, timekeeping_code="HIDDEN", is_archived=True)
+    active = ProjectFactory(
+        company=company, timekeeping_code="ACTIVE", is_archived=False
+    )
 
     client.force_login(membership.user)
     response = client.get("/projects/")
     assert response.status_code == 200
     content = response.content.decode()
-    assert active.code in content
-    assert inactive.code in content
+    assert active.timekeeping_code in content
+    assert "HIDDEN" not in content
 
 
 @pytest.mark.django_db
-def test_inactive_project_not_shown_to_employees(client):
-    membership = CompanyMembershipFactory(role="employee")
+def test_project_list_shows_all_to_admins_with_show_archived(client):
+    membership = CompanyMembershipFactory(role="admin")
     company = membership.company
-    ProjectFactory(company=company, code="HIDDEN", is_active=False)
+    active = ProjectFactory(company=company, timekeeping_code="P001", is_archived=False)
+    archived = ProjectFactory(
+        company=company, timekeeping_code="P002", is_archived=True
+    )
 
     client.force_login(membership.user)
-    response = client.get("/projects/")
-    assert "HIDDEN" not in response.content.decode()
+    response = client.get("/projects/?show_archived=1")
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert active.timekeeping_code in content
+    assert archived.timekeeping_code in content
 
 
 @pytest.mark.django_db
@@ -67,14 +61,30 @@ def test_admin_can_create_project(client):
     response = client.post(
         "/projects/create/",
         {
-            "code": "P001",
+            "timekeeping_code": "P001",
             "name": "Main Contract",
-            "contract_type": "cost_plus",
             "is_billable": "on",
         },
     )
     assert response.status_code == 302
-    assert company.projects.filter(code="P001").exists()
+    assert company.projects.filter(timekeeping_code="P001").exists()
+
+
+@pytest.mark.django_db
+def test_create_project_redirects_to_edit_form(client):
+    membership = CompanyMembershipFactory(role="admin")
+
+    client.force_login(membership.user)
+    response = client.post(
+        "/projects/create/",
+        {
+            "timekeeping_code": "P001",
+            "name": "Main Contract",
+            "is_billable": "on",
+        },
+    )
+    assert response.status_code == 302
+    assert "/edit/" in response["Location"]
 
 
 @pytest.mark.django_db
@@ -88,86 +98,163 @@ def test_employee_cannot_create_project(client):
 
 
 @pytest.mark.django_db
-def test_create_project_validates_unique_code_within_company(client):
+def test_create_project_validates_unique_timekeeping_code(client):
     membership = CompanyMembershipFactory(role="admin")
     company = membership.company
-    ProjectFactory(company=company, code="P001")
+    ProjectFactory(company=company, timekeeping_code="P001")
 
     client.force_login(membership.user)
     response = client.post(
         "/projects/create/",
         {
-            "code": "P001",
+            "timekeeping_code": "P001",
             "name": "Duplicate",
-            "contract_type": "fixed_price",
         },
     )
     assert response.status_code == 200
-    assert company.projects.filter(code="P001").count() == 1
+    assert company.projects.filter(timekeeping_code="P001").count() == 1
 
 
 @pytest.mark.django_db
 def test_create_project_same_code_different_company(client):
     membership_a = CompanyMembershipFactory(role="admin")
     company_b = CompanyFactory()
-    ProjectFactory(company=company_b, code="P001")
+    ProjectFactory(company=company_b, timekeeping_code="P001")
 
     client.force_login(membership_a.user)
     response = client.post(
         "/projects/create/",
         {
-            "code": "P001",
+            "timekeeping_code": "P001",
             "name": "Company A Project",
-            "contract_type": "t_m",
             "is_billable": "on",
         },
     )
     assert response.status_code == 302
-    assert membership_a.company.projects.filter(code="P001").exists()
+    assert membership_a.company.projects.filter(timekeeping_code="P001").exists()
 
 
 @pytest.mark.django_db
-def test_admin_can_deactivate_project(client):
+def test_admin_can_archive_project(client):
     membership = CompanyMembershipFactory(role="admin")
-    project = ProjectFactory(company=membership.company, is_active=True)
+    project = ProjectFactory(company=membership.company, is_archived=False)
 
     client.force_login(membership.user)
-    response = client.post(f"/projects/{project.pk}/deactivate/")
+    response = client.post(f"/projects/{project.pk}/archive/")
     assert response.status_code == 302
     project.refresh_from_db()
-    assert project.is_active is False
+    assert project.is_archived is True
+
+
+@pytest.mark.django_db
+def test_admin_can_unarchive_project(client):
+    membership = CompanyMembershipFactory(role="admin")
+    project = ProjectFactory(company=membership.company, is_archived=True)
+
+    client.force_login(membership.user)
+    response = client.post(f"/projects/{project.pk}/unarchive/")
+    assert response.status_code == 302
+    project.refresh_from_db()
+    assert project.is_archived is False
 
 
 @pytest.mark.django_db
 def test_admin_can_edit_project(client):
     membership = CompanyMembershipFactory(role="admin")
-    project = ProjectFactory(company=membership.company, code="OLD", name="Old Name")
+    project = ProjectFactory(
+        company=membership.company, timekeeping_code="OLD", name="Old Name"
+    )
 
     client.force_login(membership.user)
     response = client.post(
         f"/projects/{project.pk}/edit/",
         {
-            "code": "NEW",
+            "timekeeping_code": "NEW",
             "name": "New Name",
-            "contract_type": "fixed_price",
             "is_billable": "on",
         },
     )
     assert response.status_code == 302
     project.refresh_from_db()
-    assert project.code == "NEW"
+    assert project.timekeeping_code == "NEW"
     assert project.name == "New Name"
+
+
+@pytest.mark.django_db
+def test_edit_project_redirects_to_edit_form(client):
+    membership = CompanyMembershipFactory(role="admin")
+    project = ProjectFactory(company=membership.company, timekeeping_code="OLD")
+
+    client.force_login(membership.user)
+    response = client.post(
+        f"/projects/{project.pk}/edit/",
+        {
+            "timekeeping_code": "NEW",
+            "name": "New Name",
+            "is_billable": "on",
+        },
+    )
+    assert response.status_code == 302
+    assert f"/projects/{project.pk}/edit/" in response["Location"]
 
 
 @pytest.mark.django_db
 def test_project_list_scoped_to_company(client):
     membership = CompanyMembershipFactory(role="employee")
     other_company = CompanyFactory()
-    ProjectFactory(company=other_company, code="OTHER")
-    ProjectFactory(company=membership.company, code="MINE")
+    ProjectFactory(company=other_company, timekeeping_code="OTHER")
+    ProjectFactory(company=membership.company, timekeeping_code="MINE")
 
     client.force_login(membership.user)
     response = client.get("/projects/")
     content = response.content.decode()
     assert "MINE" in content
     assert "OTHER" not in content
+
+
+@pytest.mark.django_db
+def test_duplicate_name_parent_billable_shows_warning(client):
+    membership = CompanyMembershipFactory(role="admin")
+    company = membership.company
+    ProjectFactory(
+        company=company,
+        timekeeping_code="P001",
+        name="My Project",
+        parent=None,
+        is_billable=True,
+    )
+
+    client.force_login(membership.user)
+    response = client.post(
+        "/projects/create/",
+        {
+            "timekeeping_code": "P002",
+            "name": "My Project",
+            "is_billable": "on",
+        },
+        follow=True,
+    )
+    assert response.status_code == 200
+    content = response.content.decode()
+    assert "duplicate" in content.lower()
+    assert company.projects.filter(timekeeping_code="P002").exists()
+
+
+@pytest.mark.django_db
+def test_project_with_parent(client):
+    membership = CompanyMembershipFactory(role="admin")
+    company = membership.company
+    parent = ProjectFactory(company=company, timekeeping_code="2", name="Indirect")
+
+    client.force_login(membership.user)
+    response = client.post(
+        "/projects/create/",
+        {
+            "timekeeping_code": "2.1",
+            "name": "Fringe",
+            "parent_id": str(parent.pk),
+        },
+    )
+    assert response.status_code == 302
+    child = company.projects.get(timekeeping_code="2.1")
+    assert child.parent == parent

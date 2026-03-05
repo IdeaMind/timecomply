@@ -1,49 +1,67 @@
 {% extends "base.html" %}
 
-{% block title %}Projects — {{ company.name }} — TimeComply{% endblock %}
+{% block title %}Labor Categories — {{ company.name }} — TimeComply{% endblock %}
 
 {% block content %}
 <div class="row">
   <div class="column">
-    <h2>Projects — {{ company.name }}</h2>
+    <h2>Labor Categories — {{ company.name }}</h2>
     <p>
       {% if is_admin %}
-        <a href="{% url 'projects:create' %}" class="button">Add Project</a>
+        <a href="{% url 'projects:create' %}" class="button">Add Labor Category</a>
+        {% if show_archived %}
+          <a href="{% url 'projects:list' %}" class="button button-outline">Hide Archived</a>
+        {% else %}
+          <a href="{% url 'projects:list' %}?show_archived=1" class="button button-outline">Show Archived</a>
+        {% endif %}
       {% endif %}
       <a href="/dashboard/" class="button button-outline">Back to Dashboard</a>
     </p>
 
-    {% if projects %}
+    {% if tree_items %}
       <table>
         <thead>
           <tr>
             <th>Code</th>
             <th>Name</th>
-            <th>Contract Type</th>
+            <th>COA Code</th>
             <th>Billable</th>
+            <th>Auto-Add</th>
             {% if is_admin %}<th>Status</th>{% endif %}
             {% if is_admin %}<th>Actions</th>{% endif %}
           </tr>
         </thead>
         <tbody>
-          {% for project in projects %}
-            <tr>
-              <td><strong>{{ project.code }}</strong></td>
-              <td>{{ project.name }}</td>
-              <td>{{ project.get_contract_type_display }}</td>
+          {% for project, depth in tree_items %}
+            <tr{% if project.is_archived %} style="opacity: 0.5;"{% endif %}>
+              <td>
+                <span style="padding-left: {{ depth }}em;">
+                  <strong>{{ project.timekeeping_code }}</strong>
+                </span>
+              </td>
+              <td>
+                <span style="padding-left: {{ depth }}em;">{{ project.name }}</span>
+              </td>
+              <td>{{ project.coa_code|default:"—" }}</td>
               <td>{{ project.is_billable|yesno:"Yes,No" }}</td>
+              <td>{{ project.auto_add_to_timesheet|yesno:"Yes,No" }}</td>
               {% if is_admin %}
-                <td>{{ project.is_active|yesno:"Active,Inactive" }}</td>
+                <td>
+                  {% if project.is_archived %}
+                    Archived
+                  {% else %}
+                    Active
+                  {% endif %}
+                </td>
                 <td>
                   <a href="{% url 'projects:update' project.pk %}" class="button button-outline button-small">Edit</a>
-                  {% if project.is_active %}
-                    <form method="post" action="{% url 'projects:deactivate' project.pk %}" style="display:inline;">
+                  {% if project.is_archived %}
+                    <form method="post" action="{% url 'projects:unarchive' project.pk %}" style="display:inline;">
                       {% csrf_token %}
-                      <button type="submit" class="button button-outline button-small"
-                        onclick="return confirm('Deactivate project {{ project.code }}?')">
-                        Deactivate
-                      </button>
+                      <button type="submit" class="button button-outline button-small">Reactivate</button>
                     </form>
+                  {% else %}
+                    <a href="{% url 'projects:archive' project.pk %}" class="button button-outline button-small">Archive</a>
                   {% endif %}
                 </td>
               {% endif %}
@@ -52,7 +70,7 @@
         </tbody>
       </table>
     {% else %}
-      <p>No projects found.{% if is_admin %} <a href="{% url 'projects:create' %}">Add the first project.</a>{% endif %}</p>
+      <p>No labor categories found.{% if is_admin %} <a href="{% url 'projects:create' %}">Add the first one.</a>{% endif %}</p>
     {% endif %}
   </div>
 </div>
