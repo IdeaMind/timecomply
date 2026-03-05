@@ -69,14 +69,16 @@ templates/
 
 **Authentication:** allauth handles all auth — email/password login, Google Workspace OAuth, and Microsoft 365 OAuth. Do not build custom auth flows. The underlying user is Django's built-in `auth.User` (no custom user model).
 
-**Roles:** Stored as `role = CharField(choices=ROLE_CHOICES)` on `CompanyMembership`. A user holds exactly one role. `is_period_manager` is an additive boolean flag that can be set independently of role.
+**Roles:** Stored as four independent boolean flags on `CompanyMembership`. A user can hold any combination. The old `role = CharField` model has been superseded — see issue #40 for the migration.
 
-| Role | `role` value | Can do |
+| Flag | Field | Can do |
 |---|---|---|
-| Employee | `"employee"` | Enter and submit their own timesheets |
-| Approver | `"approver"` | Approve/reject timesheets for their reports |
-| Admin | `"admin"` | Manage users, charge codes, company settings |
-| Period Manager | any role + `is_period_manager=True` | Open and close pay periods |
+| Employee | `is_employee` | Fill out and submit their own timesheets |
+| Approver | `is_approver` | Approve/reject timesheets (scope defined by ApproverRelationship records) |
+| Admin | `is_admin` | Manage users, labor categories, company settings |
+| Period Manager | `is_period_manager` | Open and close pay periods |
+
+Check permissions with `membership.is_admin`, `membership.is_employee`, etc. Never check `membership.role`.
 
 **Timesheet state machine:** `draft → submitted → approved → locked` (rejected goes back to draft). Never skip states.
 
