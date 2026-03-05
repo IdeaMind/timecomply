@@ -33,12 +33,6 @@ class Company(models.Model):
 
 
 class CompanyMembership(models.Model):
-    ROLE_CHOICES = [
-        ("admin", "Admin"),
-        ("approver", "Approver"),
-        ("employee", "Employee"),
-    ]
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -50,7 +44,9 @@ class CompanyMembership(models.Model):
         on_delete=models.CASCADE,
         related_name="memberships",
     )
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="employee")
+    is_employee = models.BooleanField(default=False)
+    is_approver = models.BooleanField(default=False)
+    is_admin = models.BooleanField(default=False)
     is_period_manager = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     invited_by = models.ForeignKey(
@@ -62,8 +58,22 @@ class CompanyMembership(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
+    @property
+    def can_approve(self):
+        return self.is_approver or self.is_admin
+
     def __str__(self):
-        return f"{self.user} @ {self.company} ({self.role})"
+        roles = []
+        if self.is_admin:
+            roles.append("admin")
+        if self.is_approver:
+            roles.append("approver")
+        if self.is_employee:
+            roles.append("employee")
+        if self.is_period_manager:
+            roles.append("period manager")
+        role_str = ", ".join(roles) if roles else "no roles"
+        return f"{self.user} @ {self.company} ({role_str})"
 
 
 class Invitation(models.Model):

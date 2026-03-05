@@ -9,7 +9,7 @@ from .models import Project
 def _require_admin(request):
     """Return the membership if user is a company admin, else None."""
     membership = getattr(request.user, "membership", None)
-    if membership is None or membership.role != "admin":
+    if membership is None or not membership.is_admin:
         return None
     return membership
 
@@ -61,7 +61,7 @@ def _build_tree_list(projects):
 def project_list(request):
     company = request.company
     membership = getattr(request.user, "membership", None)
-    is_admin = membership is not None and membership.role == "admin"
+    is_admin = membership is not None and membership.is_admin
     show_archived = request.GET.get("show_archived") == "1"
 
     if is_admin:

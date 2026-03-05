@@ -31,7 +31,9 @@ class CompanyMembershipFactory(factory.django.DjangoModelFactory):
 
     user = factory.SubFactory(UserFactory)
     company = factory.SubFactory(CompanyFactory)
-    role = "employee"
+    is_employee = False
+    is_approver = False
+    is_admin = False
     is_period_manager = False
     is_active = True
 

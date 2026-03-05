@@ -17,7 +17,7 @@ def client():
 
 @pytest.fixture
 def admin_membership():
-    return CompanyMembershipFactory(role="admin")
+    return CompanyMembershipFactory(is_admin=True)
 
 
 # --- Invitation creation ---
@@ -48,7 +48,7 @@ def test_invitation_email_sent(client, admin_membership):
 
 @pytest.mark.django_db
 def test_non_admin_cannot_access_invite_view(client):
-    membership = CompanyMembershipFactory(role="employee")
+    membership = CompanyMembershipFactory()
     client.force_login(membership.user)
     response = client.get("/companies/members/invite/")
     assert response.status_code == 302
@@ -109,7 +109,8 @@ def test_accepting_invitation_creates_membership(client):
 
     membership = CompanyMembership.objects.get(user=user)
     assert membership.company == invitation.company
-    assert membership.role == "employee"
+    assert membership.is_employee is False
+    assert membership.is_admin is False
 
     invitation.refresh_from_db()
     assert invitation.accepted_at is not None
@@ -127,7 +128,7 @@ def test_unauthenticated_user_redirected_to_signup(client):
 @pytest.mark.django_db
 def test_already_member_cannot_accept_second_invite(client):
     invitation = InvitationFactory()
-    existing_membership = CompanyMembershipFactory(role="employee")
+    existing_membership = CompanyMembershipFactory()
     client.force_login(existing_membership.user)
     response = client.get(f"/companies/invite/{invitation.token}/")
     assert response.status_code == 400
@@ -149,7 +150,7 @@ def test_admin_can_revoke_invitation(client, admin_membership):
 
 @pytest.mark.django_db
 def test_non_admin_cannot_revoke_invitation(client):
-    membership = CompanyMembershipFactory(role="employee")
+    membership = CompanyMembershipFactory()
     invitation = InvitationFactory(company=membership.company)
     client.force_login(membership.user)
     response = client.post(f"/companies/invite/{invitation.token}/revoke/")
@@ -171,7 +172,7 @@ def test_admin_can_view_members_list(client, admin_membership):
 
 @pytest.mark.django_db
 def test_non_admin_cannot_view_members_list(client):
-    membership = CompanyMembershipFactory(role="employee")
+    membership = CompanyMembershipFactory()
     client.force_login(membership.user)
     response = client.get("/companies/members/")
     assert response.status_code == 302

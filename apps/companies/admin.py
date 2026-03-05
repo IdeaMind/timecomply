@@ -14,7 +14,21 @@ class CompanyAdmin(admin.ModelAdmin):
 
 @admin.register(CompanyMembership)
 class CompanyMembershipAdmin(admin.ModelAdmin):
-    list_display = ("user", "company", "role", "is_period_manager", "is_active")
-    list_filter = ("role", "is_period_manager", "is_active")
+    list_display = (
+        "user",
+        "company",
+        "is_employee",
+        "is_approver",
+        "is_admin",
+        "is_period_manager",
+        "is_active",
+    )
+    list_filter = (
+        "is_employee",
+        "is_approver",
+        "is_admin",
+        "is_period_manager",
+        "is_active",
+    )
     search_fields = ("user__email", "company__name")
     readonly_fields = ("id", "created_at")
