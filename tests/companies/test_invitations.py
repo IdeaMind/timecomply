@@ -116,11 +116,11 @@ def test_accepting_invitation_creates_membership(client):
 
 
 @pytest.mark.django_db
-def test_unauthenticated_user_redirected_to_login(client):
+def test_unauthenticated_user_redirected_to_signup(client):
     invitation = InvitationFactory()
     response = client.get(f"/companies/invite/{invitation.token}/")
     assert response.status_code == 302
-    assert "/accounts/login/" in response["Location"]
+    assert "/accounts/signup/" in response["Location"]
     assert str(invitation.token) in response["Location"]
 
 

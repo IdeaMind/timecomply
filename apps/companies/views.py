@@ -203,7 +203,7 @@ def accept_invite(request, token):
         return render(request, "companies/invite_invalid.html", status=400)
 
     if not request.user.is_authenticated:
-        return redirect(f"/accounts/login/?next=/companies/invite/{token}/")
+        return redirect(f"/accounts/signup/?next=/companies/invite/{token}/")
 
     if hasattr(request.user, "membership"):
         messages.error(request, "You are already a member of a company.")
