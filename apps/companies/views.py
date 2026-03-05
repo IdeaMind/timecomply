@@ -6,7 +6,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.text import slugify
 
-from .models import INVITATION_ROLE_CHOICES, Company, CompanyMembership, Invitation
+from .models import Company, CompanyMembership, Invitation
 
 PERIOD_TYPE_CHOICES = [
     ("weekly", "Weekly"),
@@ -163,31 +163,20 @@ def invite_member(request):
 
     if request.method == "POST":
         email = request.POST.get("email", "").strip().lower()
-        role = request.POST.get("role", "")
 
         if not email:
             messages.error(request, "Email address is required.")
-        elif role not in dict(INVITATION_ROLE_CHOICES):
-            messages.error(request, "Invalid role selected.")
         else:
             invitation = Invitation.objects.create(
                 company=company,
                 email=email,
-                role=role,
                 invited_by=request.user,
             )
             _send_invitation_email(request, invitation)
             messages.success(request, f"Invitation sent to {email}.")
             return redirect("companies:members")
 
-    return render(
-        request,
-        "companies/invite.html",
-        {
-            "company": company,
-            "role_choices": INVITATION_ROLE_CHOICES,
-        },
-    )
+    return render(request, "companies/invite.html", {"company": company})
 
 
 def accept_invite(request, token):
@@ -212,7 +201,7 @@ def accept_invite(request, token):
     CompanyMembership.objects.create(
         user=request.user,
         company=invitation.company,
-        role=invitation.role,
+        role="employee",
         invited_by=invitation.invited_by,
     )
     invitation.accepted_at = timezone.now()
@@ -220,8 +209,7 @@ def accept_invite(request, token):
 
     messages.success(
         request,
-        f"Welcome! You have joined {invitation.company.name} as "
-        f"{invitation.get_role_display()}.",
+        f"Welcome! You have joined {invitation.company.name}.",
     )
     return redirect("/dashboard/")
 

@@ -66,19 +66,12 @@ class CompanyMembership(models.Model):
         return f"{self.user} @ {self.company} ({self.role})"
 
 
-INVITATION_ROLE_CHOICES = [
-    ("employee", "Employee"),
-    ("approver", "Approver"),
-]
-
-
 class Invitation(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     company = models.ForeignKey(
         Company, on_delete=models.CASCADE, related_name="invitations"
     )
     email = models.EmailField()
-    role = models.CharField(max_length=20, choices=INVITATION_ROLE_CHOICES)
     token = models.UUIDField(default=uuid.uuid4, unique=True)
     invited_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -98,4 +91,4 @@ class Invitation(models.Model):
         )
 
     def __str__(self):
-        return f"Invitation for {self.email} to {self.company} ({self.role})"
+        return f"Invitation for {self.email} to {self.company}"

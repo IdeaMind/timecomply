@@ -42,6 +42,5 @@ class InvitationFactory(factory.django.DjangoModelFactory):
 
     company = factory.SubFactory(CompanyFactory)
     email = factory.Sequence(lambda n: f"invite{n}@example.com")
-    role = "employee"
     invited_by = factory.SubFactory(UserFactory)
     is_revoked = False

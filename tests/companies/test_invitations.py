@@ -28,7 +28,7 @@ def test_admin_can_create_invitation(client, admin_membership):
     client.force_login(admin_membership.user)
     response = client.post(
         "/companies/members/invite/",
-        {"email": "newuser@example.com", "role": "employee"},
+        {"email": "newuser@example.com"},
     )
     assert response.status_code == 302
     assert Invitation.objects.filter(email="newuser@example.com").exists()
@@ -39,7 +39,7 @@ def test_invitation_email_sent(client, admin_membership):
     client.force_login(admin_membership.user)
     client.post(
         "/companies/members/invite/",
-        {"email": "invited@example.com", "role": "employee"},
+        {"email": "invited@example.com"},
     )
     assert len(mail.outbox) == 1
     assert "invited@example.com" in mail.outbox[0].to
@@ -100,7 +100,7 @@ def test_already_accepted_invitation_rejected(client):
 
 @pytest.mark.django_db
 def test_accepting_invitation_creates_membership(client):
-    invitation = InvitationFactory(role="employee")
+    invitation = InvitationFactory()
     user = UserFactory()
     client.force_login(user)
     response = client.get(f"/companies/invite/{invitation.token}/")

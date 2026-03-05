@@ -19,6 +19,7 @@
             <th>Name</th>
             <th>Email</th>
             <th>Role</th>
+            <th>Period Manager</th>
             <th>Joined</th>
           </tr>
         </thead>
@@ -28,6 +29,7 @@
               <td>{{ m.user.get_full_name|default:m.user.username }}</td>
               <td>{{ m.user.email }}</td>
               <td>{{ m.get_role_display }}</td>
+              <td>{% if m.is_period_manager %}Yes{% endif %}</td>
               <td>{{ m.created_at|date:"N j, Y" }}</td>
             </tr>
           {% endfor %}
@@ -43,7 +45,6 @@
         <thead>
           <tr>
             <th>Email</th>
-            <th>Role</th>
             <th>Invited By</th>
             <th>Sent</th>
             <th>Action</th>
@@ -53,7 +54,6 @@
           {% for inv in pending_invitations %}
             <tr>
               <td>{{ inv.email }}</td>
-              <td>{{ inv.get_role_display }}</td>
               <td>{{ inv.invited_by.get_full_name|default:inv.invited_by.username }}</td>
               <td>{{ inv.created_at|date:"N j, Y" }}</td>
               <td>

@@ -22,15 +22,6 @@
           value="{{ request.POST.email|default:'' }}"
         >
 
-        <label for="id_role">Role</label>
-        <select id="id_role" name="role">
-          {% for value, label in role_choices %}
-            <option value="{{ value }}"
-              {% if request.POST.role == value %}selected{% endif %}>
-              {{ label }}
-            </option>
-          {% endfor %}
-        </select>
       </fieldset>
 
       <input type="submit" value="Send Invitation">

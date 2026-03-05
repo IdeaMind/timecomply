@@ -1,6 +1,6 @@
 Hi,
 
-{{ invitation.invited_by.get_full_name|default:invitation.invited_by.username }} has invited you to join {{ invitation.company.name }} on TimeComply as {{ invitation.get_role_display }}.
+{{ invitation.invited_by.get_full_name|default:invitation.invited_by.username }} has invited you to join {{ invitation.company.name }} on TimeComply.
 
 Click the link below to accept the invitation:
 
