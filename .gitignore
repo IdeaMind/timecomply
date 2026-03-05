@@ -138,6 +138,9 @@ celerybeat.pid
 .env
 .env.*
 .envrc
+
+# OAuth client secret files
+client_secret_*.json
 .venv
 env/
 venv/
