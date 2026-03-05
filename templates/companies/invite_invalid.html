@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Invalid Invitation — TimeComply{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="column column-50 column-offset-25">
+    <h2>Invitation Unavailable</h2>
+    <p>This invitation link is no longer valid. It may have expired, been revoked, or already been used.</p>
+    <p>
+      <a href="/accounts/login/" class="button">Log In</a>
+      <a href="/" class="button button-outline">Go Home</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Members — {{ company.name }} — TimeComply{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="column">
+    <h2>Members — {{ company.name }}</h2>
+    <p>
+      <a href="{% url 'companies:invite' %}" class="button">Invite Member</a>
+      <a href="/dashboard/" class="button button-outline">Back to Dashboard</a>
+    </p>
+
+    <h3>Active Members</h3>
+    {% if members %}
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Joined</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in members %}
+            <tr>
+              <td>{{ m.user.get_full_name|default:m.user.username }}</td>
+              <td>{{ m.user.email }}</td>
+              <td>{{ m.get_role_display }}</td>
+              <td>{{ m.created_at|date:"N j, Y" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No active members yet.</p>
+    {% endif %}
+
+    <h3>Pending Invitations</h3>
+    {% if pending_invitations %}
+      <table>
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Invited By</th>
+            <th>Sent</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in pending_invitations %}
+            <tr>
+              <td>{{ inv.email }}</td>
+              <td>{{ inv.get_role_display }}</td>
+              <td>{{ inv.invited_by.get_full_name|default:inv.invited_by.username }}</td>
+              <td>{{ inv.created_at|date:"N j, Y" }}</td>
+              <td>
+                <form method="post" action="{% url 'companies:revoke-invite' inv.token %}" style="display:inline;">
+                  {% csrf_token %}
+                  <button type="submit" class="button button-outline"
+                    onclick="return confirm('Revoke invitation to {{ inv.email }}?')">
+                    Revoke
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No pending invitations.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
