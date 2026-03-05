@@ -113,7 +113,7 @@ def test_duplicate_email_rejected(client, signup_url):
         primary=True,
     )
 
-    response = client.post(
+    client.post(
         signup_url,
         {
             "email": "dupe@example.com",
