@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — TimeComply{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="column">
+    <h2>Dashboard</h2>
+    {% if request.company %}
+      <p>Welcome to <strong>{{ request.company.name }}</strong>.</p>
+    {% endif %}
+    <p>More features coming soon.</p>
+  </div>
+</div>
+{% endblock %}

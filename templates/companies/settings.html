@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Company Settings — TimeComply{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="column column-50 column-offset-25">
+    <h2>Company Settings</h2>
+    <p>Manage settings for <strong>{{ company.name }}</strong>.</p>
+
+    <form method="post">
+      {% csrf_token %}
+
+      <fieldset>
+        <label for="id_period_type">Pay Period Type</label>
+        <select id="id_period_type" name="period_type">
+          {% for value, label in period_type_choices %}
+            <option value="{{ value }}" {% if company.settings.period_type == value %}selected{% endif %}>
+              {{ label }}
+            </option>
+          {% endfor %}
+        </select>
+
+        <label for="id_timezone">Timezone</label>
+        <select id="id_timezone" name="timezone">
+          {% for value, label in timezone_choices %}
+            <option value="{{ value }}" {% if company.settings.timezone == value %}selected{% endif %}>
+              {{ label }}
+            </option>
+          {% endfor %}
+        </select>
+
+        <label for="id_auto_close_hours">Auto-close Hours (leave blank to disable)</label>
+        <input
+          type="number"
+          id="id_auto_close_hours"
+          name="auto_close_hours"
+          min="1"
+          value="{{ company.settings.auto_close_hours|default:'' }}"
+          placeholder="e.g. 48"
+        >
+      </fieldset>
+
+      <input type="submit" value="Save Settings">
+      <a href="/dashboard/" class="button button-outline">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}
