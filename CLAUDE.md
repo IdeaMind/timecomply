@@ -10,14 +10,14 @@ uv run python manage.py migrate       # apply migrations
 uv run python manage.py makemigrations <app>
 uv run pytest                         # run tests
 uv run pytest --cov --cov-report=term-missing
-uv run ruff check --fix . && uv run ruff format .   # lint + format (run before committing)
+uv run ruff check --fix --unsafe-fixes . && uv run ruff format .   # lint + format (run before committing)
 ```
 
 ## Rules
 
 - **Always use `uv`** — never `pip install`, never `python` directly, never global installs
 - **Always `uv add`** to add dependencies, `uv add --dev` for dev-only
-- **Run `ruff check --fix . && ruff format .`** before every commit
+- **Run `ruff check --fix --unsafe-fixes . && ruff format .`** before every commit — `--unsafe-fixes` is required to catch all fixable errors (e.g. F841)
 - **Never commit secrets** — `.env*` files are gitignored
 - **Never squash migrations** that have already been applied to staging or production
 - **No Bootstrap, Tailwind, or JS frameworks** — CSS is Milligram (CDN) + `static/css/main.css`, JS is vanilla only
