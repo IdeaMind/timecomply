@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}{% if project %}Edit Project{% else %}Add Project{% endif %} — TimeComply{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="column column-50 column-offset-25">
+    <h2>{% if project %}Edit Project: {{ project.code }}{% else %}Add Project{% endif %}</h2>
+
+    <form method="post">
+      {% csrf_token %}
+
+      <label for="code">Project Code</label>
+      <input type="text" id="code" name="code" maxlength="50" required
+             value="{{ form_data.code|default:'' }}"
+             placeholder="e.g. P001">
+
+      <label for="name">Project Name</label>
+      <input type="text" id="name" name="name" maxlength="255" required
+             value="{{ form_data.name|default:'' }}"
+             placeholder="e.g. Main Contract">
+
+      <label for="contract_type">Contract Type</label>
+      <select id="contract_type" name="contract_type" required>
+        <option value="">— Select contract type —</option>
+        {% for value, label in contract_type_choices %}
+          <option value="{{ value }}"
+            {% if form_data.contract_type == value %}selected{% endif %}>
+            {{ label }}
+          </option>
+        {% endfor %}
+      </select>
+
+      <label>
+        <input type="checkbox" name="is_billable"
+          {% if form_data.is_billable %}checked{% endif %}>
+        Billable
+      </label>
+
+      <p>
+        <button type="submit" class="button">{% if project %}Save Changes{% else %}Create Project{% endif %}</button>
+        <a href="{% url 'projects:list' %}" class="button button-outline">Cancel</a>
+      </p>
+    </form>
+  </div>
+</div>
+{% endblock %}
