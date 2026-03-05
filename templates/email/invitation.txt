@@ -1,0 +1,13 @@
+Hi,
+
+{{ invitation.invited_by.get_full_name|default:invitation.invited_by.username }} has invited you to join {{ invitation.company.name }} on TimeComply as {{ invitation.get_role_display }}.
+
+Click the link below to accept the invitation:
+
+{{ accept_url }}
+
+This invitation will expire in 7 days.
+
+If you did not expect this invitation, you can safely ignore this email.
+
+— The TimeComply Team

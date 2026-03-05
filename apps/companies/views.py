@@ -1,9 +1,12 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
+from django.core.mail import send_mail
+from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
+from django.utils import timezone
 from django.utils.text import slugify
 
-from .models import Company, CompanyMembership
+from .models import INVITATION_ROLE_CHOICES, Company, CompanyMembership, Invitation
 
 PERIOD_TYPE_CHOICES = [
     ("weekly", "Weekly"),
@@ -121,6 +124,142 @@ def company_settings(request):
 @login_required
 def dashboard(request):
     return render(request, "dashboard.html")
+
+
+@login_required
+def members_list(request):
+    membership = getattr(request.user, "membership", None)
+    if membership is None or membership.role != "admin":
+        messages.error(request, "Only company admins can manage members.")
+        return redirect("/dashboard/")
+
+    company = membership.company
+    members = company.memberships.select_related("user").filter(is_active=True)
+    pending_invitations = company.invitations.filter(
+        is_revoked=False, accepted_at=None
+    ).select_related("invited_by")
+
+    return render(
+        request,
+        "companies/members.html",
+        {
+            "company": company,
+            "members": members,
+            "pending_invitations": [
+                inv for inv in pending_invitations if not inv.is_expired()
+            ],
+        },
+    )
+
+
+@login_required
+def invite_member(request):
+    membership = getattr(request.user, "membership", None)
+    if membership is None or membership.role != "admin":
+        messages.error(request, "Only company admins can invite members.")
+        return redirect("/dashboard/")
+
+    company = membership.company
+
+    if request.method == "POST":
+        email = request.POST.get("email", "").strip().lower()
+        role = request.POST.get("role", "")
+
+        if not email:
+            messages.error(request, "Email address is required.")
+        elif role not in dict(INVITATION_ROLE_CHOICES):
+            messages.error(request, "Invalid role selected.")
+        else:
+            invitation = Invitation.objects.create(
+                company=company,
+                email=email,
+                role=role,
+                invited_by=request.user,
+            )
+            _send_invitation_email(request, invitation)
+            messages.success(request, f"Invitation sent to {email}.")
+            return redirect("companies:members")
+
+    return render(
+        request,
+        "companies/invite.html",
+        {
+            "company": company,
+            "role_choices": INVITATION_ROLE_CHOICES,
+        },
+    )
+
+
+def accept_invite(request, token):
+    invitation = get_object_or_404(Invitation, token=token)
+
+    if not invitation.is_valid():
+        if invitation.is_revoked:
+            messages.error(request, "This invitation has been revoked.")
+        elif invitation.is_expired():
+            messages.error(request, "This invitation has expired.")
+        else:
+            messages.error(request, "This invitation has already been used.")
+        return render(request, "companies/invite_invalid.html", status=400)
+
+    if not request.user.is_authenticated:
+        return redirect(f"/accounts/login/?next=/companies/invite/{token}/")
+
+    if hasattr(request.user, "membership"):
+        messages.error(request, "You are already a member of a company.")
+        return render(request, "companies/invite_invalid.html", status=400)
+
+    CompanyMembership.objects.create(
+        user=request.user,
+        company=invitation.company,
+        role=invitation.role,
+        invited_by=invitation.invited_by,
+    )
+    invitation.accepted_at = timezone.now()
+    invitation.save(update_fields=["accepted_at"])
+
+    messages.success(
+        request,
+        f"Welcome! You have joined {invitation.company.name} as "
+        f"{invitation.get_role_display()}.",
+    )
+    return redirect("/dashboard/")
+
+
+@login_required
+def revoke_invite(request, token):
+    membership = getattr(request.user, "membership", None)
+    if membership is None or membership.role != "admin":
+        messages.error(request, "Only company admins can revoke invitations.")
+        return redirect("/dashboard/")
+
+    invitation = get_object_or_404(Invitation, token=token, company=membership.company)
+
+    if request.method == "POST":
+        invitation.is_revoked = True
+        invitation.save(update_fields=["is_revoked"])
+        messages.success(request, f"Invitation to {invitation.email} has been revoked.")
+        return redirect("companies:members")
+
+    return redirect("companies:members")
+
+
+def _send_invitation_email(request, invitation):
+    accept_url = request.build_absolute_uri(f"/companies/invite/{invitation.token}/")
+    body = render_to_string(
+        "email/invitation.txt",
+        {
+            "invitation": invitation,
+            "accept_url": accept_url,
+        },
+    )
+    send_mail(
+        subject=f"You've been invited to join {invitation.company.name} on TimeComply",
+        message=body,
+        from_email=None,
+        recipient_list=[invitation.email],
+        fail_silently=False,
+    )
 
 
 def _unique_slug(name):

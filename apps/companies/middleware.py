@@ -5,6 +5,7 @@ from .models import CompanyMembership
 EXEMPT_PATHS = (
     "/accounts/",
     "/companies/register/",
+    "/companies/invite/",
     "/admin/",
     "/health/",
     "/api/",

@@ -2,6 +2,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 COMPANY_SETTINGS_DEFAULTS = {
     "period_type": "weekly",
@@ -63,3 +64,38 @@ class CompanyMembership(models.Model):
 
     def __str__(self):
         return f"{self.user} @ {self.company} ({self.role})"
+
+
+INVITATION_ROLE_CHOICES = [
+    ("employee", "Employee"),
+    ("approver", "Approver"),
+]
+
+
+class Invitation(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, related_name="invitations"
+    )
+    email = models.EmailField()
+    role = models.CharField(max_length=20, choices=INVITATION_ROLE_CHOICES)
+    token = models.UUIDField(default=uuid.uuid4, unique=True)
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="invitations_sent",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    is_revoked = models.BooleanField(default=False)
+
+    def is_expired(self):
+        return (timezone.now() - self.created_at).days >= 7
+
+    def is_valid(self):
+        return (
+            not self.is_revoked and not self.is_expired() and self.accepted_at is None
+        )
+
+    def __str__(self):
+        return f"Invitation for {self.email} to {self.company} ({self.role})"

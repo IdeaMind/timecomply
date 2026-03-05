@@ -1,7 +1,7 @@
 import factory
 from django.contrib.auth import get_user_model
 
-from apps.companies.models import Company, CompanyMembership
+from apps.companies.models import Company, CompanyMembership, Invitation
 
 User = get_user_model()
 
@@ -34,3 +34,14 @@ class CompanyMembershipFactory(factory.django.DjangoModelFactory):
     role = "employee"
     is_period_manager = False
     is_active = True
+
+
+class InvitationFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Invitation
+
+    company = factory.SubFactory(CompanyFactory)
+    email = factory.Sequence(lambda n: f"invite{n}@example.com")
+    role = "employee"
+    invited_by = factory.SubFactory(UserFactory)
+    is_revoked = False
