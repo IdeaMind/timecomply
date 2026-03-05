@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Archive Labor Category — TimeComply{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="column column-50 column-offset-25">
+    <h2>Archive Labor Category</h2>
+    <p>Are you sure you want to archive <strong>{{ project.timekeeping_code }} — {{ project.name }}</strong>?</p>
+    <p>Archived categories are hidden from the main list and from time entry forms. You can reactivate them at any time from the archived view.</p>
+
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="button">Archive</button>
+      <a href="{% url 'projects:list' %}" class="button button-outline">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

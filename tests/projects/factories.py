@@ -9,8 +9,10 @@ class ProjectFactory(factory.django.DjangoModelFactory):
         model = Project
 
     company = factory.SubFactory(CompanyFactory)
-    code = factory.Sequence(lambda n: f"P{n:03d}")
+    timekeeping_code = factory.Sequence(lambda n: f"P{n:03d}")
     name = factory.Sequence(lambda n: f"Project {n}")
-    contract_type = "cost_plus"
-    is_active = True
+    parent = None
+    coa_code = ""
     is_billable = True
+    auto_add_to_timesheet = False
+    is_archived = False

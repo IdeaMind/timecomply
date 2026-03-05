@@ -1,35 +1,40 @@
 {% extends "base.html" %}
 
-{% block title %}{% if project %}Edit Project{% else %}Add Project{% endif %} — TimeComply{% endblock %}
+{% block title %}{% if project %}Edit Labor Category{% else %}Add Labor Category{% endif %} — TimeComply{% endblock %}
 
 {% block content %}
 <div class="row">
   <div class="column column-50 column-offset-25">
-    <h2>{% if project %}Edit Project: {{ project.code }}{% else %}Add Project{% endif %}</h2>
+    <h2>{% if project %}Edit: {{ project.timekeeping_code }} — {{ project.name }}{% else %}Add Labor Category{% endif %}</h2>
 
     <form method="post">
       {% csrf_token %}
 
-      <label for="code">Project Code</label>
-      <input type="text" id="code" name="code" maxlength="50" required
-             value="{{ form_data.code|default:'' }}"
-             placeholder="e.g. P001">
+      <label for="timekeeping_code">Timekeeping Code <span style="color: red;">*</span></label>
+      <input type="text" id="timekeeping_code" name="timekeeping_code" maxlength="50" required
+             value="{{ form_data.timekeeping_code|default:'' }}"
+             placeholder="e.g. 1, 2.1, 2.1.1">
 
-      <label for="name">Project Name</label>
+      <label for="name">Name <span style="color: red;">*</span></label>
       <input type="text" id="name" name="name" maxlength="255" required
              value="{{ form_data.name|default:'' }}"
-             placeholder="e.g. Main Contract">
+             placeholder="e.g. Direct Labor">
 
-      <label for="contract_type">Contract Type</label>
-      <select id="contract_type" name="contract_type" required>
-        <option value="">— Select contract type —</option>
-        {% for value, label in contract_type_choices %}
-          <option value="{{ value }}"
-            {% if form_data.contract_type == value %}selected{% endif %}>
-            {{ label }}
+      <label for="parent_id">Parent Labor Category</label>
+      <select id="parent_id" name="parent_id">
+        <option value="">— None (top-level) —</option>
+        {% for choice in parent_choices %}
+          <option value="{{ choice.pk }}"
+            {% if form_data.parent_id == choice.pk|stringformat:"s" %}selected{% endif %}>
+            {{ choice.timekeeping_code }} — {{ choice.name }}
           </option>
         {% endfor %}
       </select>
+
+      <label for="coa_code">Chart of Accounts (COA) Code</label>
+      <input type="text" id="coa_code" name="coa_code" maxlength="50"
+             value="{{ form_data.coa_code|default:'' }}"
+             placeholder="e.g. 5000 (optional)">
 
       <label>
         <input type="checkbox" name="is_billable"
@@ -37,8 +42,14 @@
         Billable
       </label>
 
+      <label>
+        <input type="checkbox" name="auto_add_to_timesheet"
+          {% if form_data.auto_add_to_timesheet %}checked{% endif %}>
+        Auto-add to timesheet
+      </label>
+
       <p>
-        <button type="submit" class="button">{% if project %}Save Changes{% else %}Create Project{% endif %}</button>
+        <button type="submit" class="button">{% if project %}Save Changes{% else %}Create{% endif %}</button>
         <a href="{% url 'projects:list' %}" class="button button-outline">Cancel</a>
       </p>
     </form>
