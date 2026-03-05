@@ -11,5 +11,9 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0"]
 # Email backend for development
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
+# Skip email verification and password complexity locally
+ACCOUNT_EMAIL_VERIFICATION = "none"
+AUTH_PASSWORD_VALIDATORS = []
+
 # Django Debug Toolbar (optional, install separately if needed)
 INTERNAL_IPS = ["127.0.0.1"]
