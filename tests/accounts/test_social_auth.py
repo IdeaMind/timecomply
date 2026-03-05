@@ -13,7 +13,7 @@ User = get_user_model()
 
 @pytest.fixture
 def google_app(db):
-    """Return the Google SocialApp (created by data migration), updating credentials for tests."""
+    """Return the Google SocialApp (created by data migration), updating credentials."""
     site = Site.objects.get_or_create(
         id=1, defaults={"domain": "example.com", "name": "TimeComply"}
     )[0]
