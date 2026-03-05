@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Projects — {{ company.name }} — TimeComply{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="column">
+    <h2>Projects — {{ company.name }}</h2>
+    <p>
+      {% if is_admin %}
+        <a href="{% url 'projects:create' %}" class="button">Add Project</a>
+      {% endif %}
+      <a href="/dashboard/" class="button button-outline">Back to Dashboard</a>
+    </p>
+
+    {% if projects %}
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Contract Type</th>
+            <th>Billable</th>
+            {% if is_admin %}<th>Status</th>{% endif %}
+            {% if is_admin %}<th>Actions</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for project in projects %}
+            <tr>
+              <td><strong>{{ project.code }}</strong></td>
+              <td>{{ project.name }}</td>
+              <td>{{ project.get_contract_type_display }}</td>
+              <td>{{ project.is_billable|yesno:"Yes,No" }}</td>
+              {% if is_admin %}
+                <td>{{ project.is_active|yesno:"Active,Inactive" }}</td>
+                <td>
+                  <a href="{% url 'projects:update' project.pk %}" class="button button-outline button-small">Edit</a>
+                  {% if project.is_active %}
+                    <form method="post" action="{% url 'projects:deactivate' project.pk %}" style="display:inline;">
+                      {% csrf_token %}
+                      <button type="submit" class="button button-outline button-small"
+                        onclick="return confirm('Deactivate project {{ project.code }}?')">
+                        Deactivate
+                      </button>
+                    </form>
+                  {% endif %}
+                </td>
+              {% endif %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No projects found.{% if is_admin %} <a href="{% url 'projects:create' %}">Add the first project.</a>{% endif %}</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

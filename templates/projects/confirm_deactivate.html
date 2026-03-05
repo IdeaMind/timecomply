@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Deactivate Project — TimeComply{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="column column-50 column-offset-25">
+    <h2>Deactivate Project</h2>
+    <p>Are you sure you want to deactivate <strong>{{ project.code }} — {{ project.name }}</strong>?</p>
+    <p>Inactive projects will be hidden from time entry forms but remain visible to admins.</p>
+
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="button">Deactivate</button>
+      <a href="{% url 'projects:list' %}" class="button button-outline">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}
