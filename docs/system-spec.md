@@ -63,8 +63,9 @@ All invitations create users with no permissions by default; an admin assigns pe
 - The system provides a default labor type tree out of the box (see below), which companies can customize
 - Certain categories are automatically pre-loaded onto every employee's timesheet (e.g. Holiday, Vacation, Sick/Jury Duty, Administrative)
 - Admins can deactivate (archive) a project or labor category; archived items are hidden from time entry but can be reactivated by an admin
+- Admins can permanently delete a project or labor category (separate from archive)
 - Project codes must be unique within a company; duplicate name+category+billable combinations should warn the user
-- After creating or editing a project, the user is returned to the edit form so they can review and correct any typos before moving on
+- After creating a project, the user is returned to the edit form to review. After editing a project, the user is returned to the project list
 
 ### Default Labor Type Tree
 
@@ -96,20 +97,27 @@ Total Labor Hours
 
 ## Pay Periods
 
-- Companies choose their pay period type: weekly, biweekly, semimonthly, or monthly
+- The company's pay period type (weekly, biweekly, semimonthly, or monthly) is a **company-level setting**, configured in Company Settings — not chosen each time a period is created
+- When creating a new pay period, only the **start date** is entered; the end date is automatically calculated from the start date and the company's period type
+- **Auto-close** (automatically close the period after all timesheets are approved) is a company-level setting, not a per-period field
+- **Auto-open**: a company can enable automatic opening of future periods. When enabled, periods can be pre-created and are visible to employees as a read-only calendar view before they officially open. Employees cannot add or edit entries until the period opens.
+- New periods begin in **future** state — visible to employees but not editable — and transition to **open** at their start date (manually by a Period Manager, or automatically if auto-open is enabled)
 - Pay periods can be opened and closed manually by a Period Manager
-- Alternatively, periods can be managed automatically (opens on day 1, closes after all timesheets are approved)
+- A Period Manager or admin can **delete** a pay period that was created in error, provided it contains no timesheet entries
+- The pay period management page shows the company's period type for reference but does not allow changing it there — period type changes happen in Company Settings
 
 ---
 
 ## Time Entry
 
-- Employees enter hours daily against charge codes from their company's project/labor category list
-- Each time entry specifies a date, a charge code, an hour amount, and optional notes
+- Time entry is presented as an **editable weekly grid**: rows are labor categories, columns are the days of the pay period, cells contain hours
+- Each cell specifies an hour amount only — notes are not part of time entry
 - Hours cannot be negative; a single entry cannot exceed 24 hours
-- The date of an entry must fall within the current open pay period
+- Hours in a cell must fall within the current open pay period's dates
 - Leave time (vacation, sick, holiday) is entered just like any other charge code — no balance tracking in v1
-- Certain labor categories (e.g. Holiday, Vacation, Sick/Jury Duty, Administrative) appear pre-loaded on every employee's timesheet automatically
+- An **Add Row** button at the bottom of the grid opens a picker so employees can add another labor category to their timesheet
+- **Preset categories**: every employee has a personal list of preset labor categories that automatically appear as rows in their timesheet grid. Admins can configure presets for any employee; employees can manage their own presets (limited to non-archived categories). Pre-populated auto-add categories (Holiday, Vacation, etc.) are separate from and in addition to personal presets.
+- **Timesheet navigation**: employees can move between pay periods using Previous, Current, and Next buttons. Past timesheets — regardless of state (draft, submitted, approved, locked) — are viewable in a read-only format. Future periods in **future** state show a read-only view. The Current button always navigates to the open period's timesheet.
 - When no pay period is open, the employee sees a friendly message rather than an error
 
 ---
@@ -138,6 +146,21 @@ Total Labor Hours
 - Approvers see a queue of submitted timesheets for their direct reports
 - Approvers can approve or reject; rejection requires a written reason
 - An employee cannot approve their own timesheet
+
+### Approver Setup UI
+
+- The approver setup interface is **supervisor-centric**: an admin selects a supervisor, then sees all employees they can approve and uses a multi-select list to quickly assign or remove multiple employees at once
+- This replaces the employee-centric approach of configuring one approver per employee individually
+
+### Backup Approver Inheritance
+
+- An admin can create a **backup approver rule** that designates a backup approver for all employees under a given supervisor (e.g. the COO is backup for all supervisors under them)
+- When this rule exists:
+  - Every employee currently assigned to the supervisor automatically has the backup approver added
+  - When a new employee is later assigned to the supervisor, they **immediately** inherit the backup approver — no additional admin action required
+  - When an employee is removed from the supervisor's group, the inherited backup approver is **automatically removed**
+- Rules are permanent until explicitly deleted by an admin
+- Multiple backup approver rules can stack (an employee can inherit backups from multiple rules)
 
 ---
 
