@@ -56,7 +56,7 @@ def register_company(request):
         CompanyMembership.objects.create(
             user=request.user,
             company=company,
-            role="admin",
+            is_admin=True,
         )
         return redirect("/dashboard/")
 
@@ -73,7 +73,7 @@ def register_company(request):
 @login_required
 def company_settings(request):
     membership = getattr(request.user, "membership", None)
-    if membership is None or membership.role != "admin":
+    if membership is None or not membership.is_admin:
         messages.error(request, "Only company admins can access settings.")
         return redirect("/dashboard/")
 
@@ -129,7 +129,7 @@ def dashboard(request):
 @login_required
 def members_list(request):
     membership = getattr(request.user, "membership", None)
-    if membership is None or membership.role != "admin":
+    if membership is None or not membership.is_admin:
         messages.error(request, "Only company admins can manage members.")
         return redirect("/dashboard/")
 
@@ -155,7 +155,7 @@ def members_list(request):
 @login_required
 def invite_member(request):
     membership = getattr(request.user, "membership", None)
-    if membership is None or membership.role != "admin":
+    if membership is None or not membership.is_admin:
         messages.error(request, "Only company admins can invite members.")
         return redirect("/dashboard/")
 
@@ -201,7 +201,6 @@ def accept_invite(request, token):
     CompanyMembership.objects.create(
         user=request.user,
         company=invitation.company,
-        role="employee",
         invited_by=invitation.invited_by,
     )
     invitation.accepted_at = timezone.now()
@@ -217,7 +216,7 @@ def accept_invite(request, token):
 @login_required
 def revoke_invite(request, token):
     membership = getattr(request.user, "membership", None)
-    if membership is None or membership.role != "admin":
+    if membership is None or not membership.is_admin:
         messages.error(request, "Only company admins can revoke invitations.")
         return redirect("/dashboard/")
 
@@ -228,6 +227,36 @@ def revoke_invite(request, token):
         invitation.save(update_fields=["is_revoked"])
         messages.success(request, f"Invitation to {invitation.email} has been revoked.")
         return redirect("companies:members")
+
+    return redirect("companies:members")
+
+
+@login_required
+def update_member(request, pk):
+    membership = getattr(request.user, "membership", None)
+    if membership is None or not membership.is_admin:
+        messages.error(request, "Only company admins can update member permissions.")
+        return redirect("/dashboard/")
+
+    member = get_object_or_404(
+        CompanyMembership, pk=pk, company=membership.company, is_active=True
+    )
+
+    if request.method == "POST":
+        member.is_employee = request.POST.get("is_employee") == "on"
+        member.is_approver = request.POST.get("is_approver") == "on"
+        member.is_admin = request.POST.get("is_admin") == "on"
+        member.is_period_manager = request.POST.get("is_period_manager") == "on"
+        member.save(
+            update_fields=[
+                "is_employee",
+                "is_approver",
+                "is_admin",
+                "is_period_manager",
+            ]
+        )
+        display_name = member.user.get_full_name() or member.user.email
+        messages.success(request, f"Permissions updated for {display_name}.")
 
     return redirect("companies:members")
 

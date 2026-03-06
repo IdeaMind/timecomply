@@ -35,33 +35,46 @@ def test_company_str():
 
 
 @pytest.mark.django_db
-def test_period_manager_flag_independent_of_role():
+def test_period_manager_flag_independent_of_other_flags():
     user = UserFactory()
     company = CompanyFactory()
     membership = CompanyMembershipFactory(
         user=user,
         company=company,
-        role="employee",
+        is_employee=True,
         is_period_manager=True,
     )
-    assert membership.role == "employee"
+    assert membership.is_employee is True
     assert membership.is_period_manager is True
 
 
 @pytest.mark.django_db
-def test_membership_default_role_is_employee():
+def test_membership_default_flags_are_false():
     membership = CompanyMembershipFactory()
-    assert membership.role == "employee"
+    assert membership.is_employee is False
+    assert membership.is_approver is False
+    assert membership.is_admin is False
+    assert membership.is_period_manager is False
 
 
 @pytest.mark.django_db
 def test_membership_str():
     user = UserFactory(username="alice")
     company = CompanyFactory(name="Acme")
-    membership = CompanyMembershipFactory(user=user, company=company, role="admin")
+    membership = CompanyMembershipFactory(user=user, company=company, is_admin=True)
     assert "alice" in str(membership)
     assert "Acme" in str(membership)
     assert "admin" in str(membership)
+
+
+@pytest.mark.django_db
+def test_can_approve_property():
+    approver = CompanyMembershipFactory(is_approver=True)
+    admin = CompanyMembershipFactory(is_admin=True)
+    employee_only = CompanyMembershipFactory(is_employee=True)
+    assert approver.can_approve is True
+    assert admin.can_approve is True
+    assert employee_only.can_approve is False
 
 
 @pytest.mark.django_db

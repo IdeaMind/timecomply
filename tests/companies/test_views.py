@@ -34,7 +34,7 @@ def test_registration_creates_company_with_defaults(client):
 
     membership = CompanyMembership.objects.get(user=user)
     assert membership.company == company
-    assert membership.role == "admin"
+    assert membership.is_admin is True
 
 
 @pytest.mark.django_db
@@ -57,7 +57,7 @@ def test_registration_page_requires_login(client):
 
 @pytest.mark.django_db
 def test_settings_page_admin_only(client):
-    membership = CompanyMembershipFactory(role="employee")
+    membership = CompanyMembershipFactory()
     client.force_login(membership.user)
     response = client.get("/companies/settings/")
     assert response.status_code == 302
@@ -66,7 +66,7 @@ def test_settings_page_admin_only(client):
 
 @pytest.mark.django_db
 def test_settings_page_accessible_by_admin(client):
-    membership = CompanyMembershipFactory(role="admin")
+    membership = CompanyMembershipFactory(is_admin=True)
     client.force_login(membership.user)
     response = client.get("/companies/settings/")
     assert response.status_code == 200
@@ -74,7 +74,7 @@ def test_settings_page_accessible_by_admin(client):
 
 @pytest.mark.django_db
 def test_settings_page_updates_company_settings(client):
-    membership = CompanyMembershipFactory(role="admin")
+    membership = CompanyMembershipFactory(is_admin=True)
     client.force_login(membership.user)
     response = client.post(
         "/companies/settings/",

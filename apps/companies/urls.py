@@ -11,4 +11,5 @@ urlpatterns = [
     path("members/invite/", views.invite_member, name="invite"),
     path("invite/<uuid:token>/", views.accept_invite, name="accept-invite"),
     path("invite/<uuid:token>/revoke/", views.revoke_invite, name="revoke-invite"),
+    path("members/<uuid:pk>/update/", views.update_member, name="update-member"),
 ]

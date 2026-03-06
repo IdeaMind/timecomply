@@ -20,7 +20,7 @@ def test_project_list_requires_login(client):
 
 @pytest.mark.django_db
 def test_project_list_shows_active_not_archived_to_employees(client):
-    membership = CompanyMembershipFactory(role="employee")
+    membership = CompanyMembershipFactory(is_employee=True)
     company = membership.company
     ProjectFactory(company=company, timekeeping_code="HIDDEN", is_archived=True)
     active = ProjectFactory(
@@ -37,7 +37,7 @@ def test_project_list_shows_active_not_archived_to_employees(client):
 
 @pytest.mark.django_db
 def test_project_list_shows_all_to_admins_with_show_archived(client):
-    membership = CompanyMembershipFactory(role="admin")
+    membership = CompanyMembershipFactory(is_admin=True)
     company = membership.company
     active = ProjectFactory(company=company, timekeeping_code="P001", is_archived=False)
     archived = ProjectFactory(
@@ -54,7 +54,7 @@ def test_project_list_shows_all_to_admins_with_show_archived(client):
 
 @pytest.mark.django_db
 def test_admin_can_create_project(client):
-    membership = CompanyMembershipFactory(role="admin")
+    membership = CompanyMembershipFactory(is_admin=True)
     company = membership.company
 
     client.force_login(membership.user)
@@ -72,7 +72,7 @@ def test_admin_can_create_project(client):
 
 @pytest.mark.django_db
 def test_create_project_redirects_to_edit_form(client):
-    membership = CompanyMembershipFactory(role="admin")
+    membership = CompanyMembershipFactory(is_admin=True)
 
     client.force_login(membership.user)
     response = client.post(
@@ -89,7 +89,7 @@ def test_create_project_redirects_to_edit_form(client):
 
 @pytest.mark.django_db
 def test_employee_cannot_create_project(client):
-    membership = CompanyMembershipFactory(role="employee")
+    membership = CompanyMembershipFactory(is_employee=True)
 
     client.force_login(membership.user)
     response = client.get("/projects/create/")
@@ -99,7 +99,7 @@ def test_employee_cannot_create_project(client):
 
 @pytest.mark.django_db
 def test_create_project_validates_unique_timekeeping_code(client):
-    membership = CompanyMembershipFactory(role="admin")
+    membership = CompanyMembershipFactory(is_admin=True)
     company = membership.company
     ProjectFactory(company=company, timekeeping_code="P001")
 
@@ -117,7 +117,7 @@ def test_create_project_validates_unique_timekeeping_code(client):
 
 @pytest.mark.django_db
 def test_create_project_same_code_different_company(client):
-    membership_a = CompanyMembershipFactory(role="admin")
+    membership_a = CompanyMembershipFactory(is_admin=True)
     company_b = CompanyFactory()
     ProjectFactory(company=company_b, timekeeping_code="P001")
 
@@ -136,7 +136,7 @@ def test_create_project_same_code_different_company(client):
 
 @pytest.mark.django_db
 def test_admin_can_archive_project(client):
-    membership = CompanyMembershipFactory(role="admin")
+    membership = CompanyMembershipFactory(is_admin=True)
     project = ProjectFactory(company=membership.company, is_archived=False)
 
     client.force_login(membership.user)
@@ -148,7 +148,7 @@ def test_admin_can_archive_project(client):
 
 @pytest.mark.django_db
 def test_admin_can_unarchive_project(client):
-    membership = CompanyMembershipFactory(role="admin")
+    membership = CompanyMembershipFactory(is_admin=True)
     project = ProjectFactory(company=membership.company, is_archived=True)
 
     client.force_login(membership.user)
@@ -160,7 +160,7 @@ def test_admin_can_unarchive_project(client):
 
 @pytest.mark.django_db
 def test_admin_can_edit_project(client):
-    membership = CompanyMembershipFactory(role="admin")
+    membership = CompanyMembershipFactory(is_admin=True)
     project = ProjectFactory(
         company=membership.company, timekeeping_code="OLD", name="Old Name"
     )
@@ -182,7 +182,7 @@ def test_admin_can_edit_project(client):
 
 @pytest.mark.django_db
 def test_edit_project_redirects_to_edit_form(client):
-    membership = CompanyMembershipFactory(role="admin")
+    membership = CompanyMembershipFactory(is_admin=True)
     project = ProjectFactory(company=membership.company, timekeeping_code="OLD")
 
     client.force_login(membership.user)
@@ -200,7 +200,7 @@ def test_edit_project_redirects_to_edit_form(client):
 
 @pytest.mark.django_db
 def test_project_list_scoped_to_company(client):
-    membership = CompanyMembershipFactory(role="employee")
+    membership = CompanyMembershipFactory(is_employee=True)
     other_company = CompanyFactory()
     ProjectFactory(company=other_company, timekeeping_code="OTHER")
     ProjectFactory(company=membership.company, timekeeping_code="MINE")
@@ -214,7 +214,7 @@ def test_project_list_scoped_to_company(client):
 
 @pytest.mark.django_db
 def test_duplicate_name_parent_billable_shows_warning(client):
-    membership = CompanyMembershipFactory(role="admin")
+    membership = CompanyMembershipFactory(is_admin=True)
     company = membership.company
     ProjectFactory(
         company=company,
@@ -242,7 +242,7 @@ def test_duplicate_name_parent_billable_shows_warning(client):
 
 @pytest.mark.django_db
 def test_project_with_parent(client):
-    membership = CompanyMembershipFactory(role="admin")
+    membership = CompanyMembershipFactory(is_admin=True)
     company = membership.company
     parent = ProjectFactory(company=company, timekeeping_code="2", name="Indirect")
 
