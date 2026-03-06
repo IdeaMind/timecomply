@@ -8,6 +8,7 @@ urlpatterns = [
     # Time entry
     path("timesheets/", views.timesheet_list, name="list"),
     path("timesheets/enter/", views.entry_view, name="entry"),
+    path("timesheets/presets/", views.preset_manage, name="preset_manage"),
     path("timesheets/<uuid:pk>/", views.weekly_view, name="weekly"),
     path("timesheets/<uuid:pk>/submit/", views.submit_confirm, name="submit_confirm"),
     # Period management
@@ -15,4 +16,5 @@ urlpatterns = [
     path("periods/create/", views.period_create, name="period_create"),
     path("periods/<uuid:pk>/close/", views.period_close, name="period_close"),
     path("periods/<uuid:pk>/open/", views.period_open, name="period_open"),
+    path("periods/<uuid:pk>/delete/", views.period_delete, name="period_delete"),
 ]

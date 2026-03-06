@@ -36,9 +36,17 @@
           id="id_auto_close_hours"
           name="auto_close_hours"
           min="1"
-          value="{{ company.settings.auto_close_hours|default:'' }}"
+          value="{{ company.auto_close_hours|default:'' }}"
           placeholder="e.g. 48"
         >
+        <small>Hours after all timesheets are approved to auto-close the period.</small>
+
+        <label style="display:flex; align-items:center; gap:0.5rem; margin-top:1rem;">
+          <input type="checkbox" name="auto_open" {% if company.auto_open %}checked{% endif %}>
+          Auto-open future periods when their start date arrives
+        </label>
+        <small>When enabled, periods with status "Future" are automatically opened on page load
+          when their start date is today or earlier.</small>
       </fieldset>
 
       <input type="submit" value="Save Settings">

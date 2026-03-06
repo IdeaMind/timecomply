@@ -6,7 +6,6 @@ from django.utils import timezone
 
 COMPANY_SETTINGS_DEFAULTS = {
     "period_type": "weekly",
-    "auto_close_hours": None,
     "timezone": "America/New_York",
 }
 
@@ -17,6 +16,8 @@ class Company(models.Model):
     slug = models.SlugField(unique=True)
     is_active = models.BooleanField(default=True)
     settings = models.JSONField(default=dict)
+    auto_close_hours = models.PositiveIntegerField(null=True, blank=True)
+    auto_open = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

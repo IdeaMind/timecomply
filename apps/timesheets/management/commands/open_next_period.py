@@ -47,19 +47,17 @@ class Command(BaseCommand):
                 )
                 continue
 
-            period_type = company.settings.get("period_type", last_period.period_type)
-            auto_close_hours = company.settings.get("auto_close_hours")
+            period_type = company.settings.get("period_type", "weekly")
 
             TimePeriod.objects.create(
                 company=company,
                 start_date=start_date,
                 end_date=end_date,
-                period_type=period_type,
-                auto_close_hours=auto_close_hours,
+                status="future",
             )
             self.stdout.write(
                 self.style.SUCCESS(
                     f"{company}: created period {start_date}–{end_date}"
-                    f" ({period_type})."
+                    f" ({period_type}) with status 'future'."
                 )
             )

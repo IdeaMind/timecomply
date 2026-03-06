@@ -7,13 +7,7 @@ from django.db.models import UniqueConstraint
 
 
 class TimePeriod(models.Model):
-    PERIOD_TYPE_CHOICES = [
-        ("weekly", "Weekly (Mon-Sun)"),
-        ("biweekly", "Bi-Weekly (2 weeks, Mon-Sun)"),
-        ("semimonthly", "Semi-Monthly (1st-15th, 16th-EOM)"),
-        ("monthly", "Monthly"),
-    ]
-    STATUS_CHOICES = [("open", "Open"), ("closed", "Closed")]
+    STATUS_CHOICES = [("open", "Open"), ("closed", "Closed"), ("future", "Future")]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     company = models.ForeignKey(
@@ -23,9 +17,7 @@ class TimePeriod(models.Model):
     )
     start_date = models.DateField()
     end_date = models.DateField()
-    period_type = models.CharField(max_length=15, choices=PERIOD_TYPE_CHOICES)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="open")
-    auto_close_hours = models.PositiveIntegerField(null=True, blank=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="future")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -38,6 +30,10 @@ class TimePeriod(models.Model):
 
     def __str__(self):
         return f"{self.company} | {self.start_date} – {self.end_date} ({self.status})"
+
+    @property
+    def is_open(self):
+        return self.status == "open"
 
 
 class Timesheet(models.Model):
@@ -130,3 +126,35 @@ class TimeEntry(models.Model):
             period = self.timesheet.period
             if not (period.start_date <= self.date <= period.end_date):
                 raise ValidationError("Date must be within the timesheet period.")
+
+
+class EmployeePreset(models.Model):
+    """Labor categories an employee wants pre-populated on their timesheet grid."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    company = models.ForeignKey(
+        "companies.Company",
+        on_delete=models.CASCADE,
+        related_name="employee_presets",
+    )
+    employee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="employee_presets",
+    )
+    labor_category = models.ForeignKey(
+        "projects.Project",
+        on_delete=models.CASCADE,
+        related_name="employee_presets",
+    )
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=["company", "employee", "labor_category"],
+                name="unique_employee_preset",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.employee} preset: {self.labor_category} @ {self.company}"

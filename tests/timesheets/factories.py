@@ -19,9 +19,7 @@ class TimePeriodFactory(factory.django.DjangoModelFactory):
             else o.start_date
         )
     )
-    period_type = "weekly"
     status = "open"
-    auto_close_hours = None
 
 
 class TimesheetFactory(factory.django.DjangoModelFactory):

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Labor Category — TimeComply{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="column column-50 column-offset-25">
+    <h2>Delete Labor Category</h2>
+
+    {% if has_entries %}
+      <p class="message message-warning">
+        <strong>Cannot delete this labor category.</strong><br>
+        <strong>{{ project.timekeeping_code }} — {{ project.name }}</strong> has time entries
+        referencing it and cannot be permanently deleted. Archive it instead to hide it
+        from future timesheets.
+      </p>
+      <p>
+        <a href="{% url 'projects:archive' project.pk %}" class="button">Archive Instead</a>
+        <a href="{% url 'projects:update' project.pk %}" class="button button-outline">Back to Edit</a>
+      </p>
+    {% else %}
+      <p>
+        Are you sure you want to permanently delete
+        <strong>{{ project.timekeeping_code }} — {{ project.name }}</strong>?
+        This action cannot be undone.
+      </p>
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="button" style="background-color: #e74c3c; border-color: #e74c3c;">Delete Permanently</button>
+        <a href="{% url 'projects:update' project.pk %}" class="button button-outline">Cancel</a>
+      </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

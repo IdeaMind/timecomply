@@ -7,6 +7,45 @@ from django.db import models
 from apps.companies.models import CompanyMembership
 
 
+class BackupApproverRule(models.Model):
+    """
+    When a supervisor has a BackupApproverRule, every employee assigned to that
+    supervisor automatically gets a BackupApprover record created (source_rule set).
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    company = models.ForeignKey(
+        "companies.Company",
+        on_delete=models.CASCADE,
+        related_name="backup_approver_rules",
+    )
+    supervisor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="backup_approver_rules_as_supervisor",
+    )
+    backup_approver = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="backup_approver_rules_as_backup",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "supervisor", "backup_approver"],
+                name="unique_backup_approver_rule",
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f"Rule: backup {self.backup_approver} for supervisor "
+            f"{self.supervisor} @ {self.company}"
+        )
+
+
 class ApproverRelationship(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     employee = models.OneToOneField(
@@ -62,6 +101,13 @@ class BackupApprover(models.Model):
         related_name="backup_approver_for",
     )
     priority = models.PositiveIntegerField(default=1)
+    source_rule = models.ForeignKey(
+        BackupApproverRule,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="created_backups",
+    )
 
     class Meta:
         ordering = ["priority"]
@@ -105,3 +151,29 @@ def get_approver_for(employee, company):
         return rel.primary_approver
     except ApproverRelationship.DoesNotExist:
         return None
+
+
+def apply_backup_rules_for_relationship(rel):
+    """
+    When an ApproverRelationship is created/updated, create BackupApprover
+    records for any BackupApproverRules the supervisor has.
+    """
+    rules = BackupApproverRule.objects.filter(
+        company=rel.company, supervisor=rel.primary_approver
+    )
+    for rule in rules:
+        BackupApprover.objects.get_or_create(
+            relationship=rel,
+            approver=rule.backup_approver,
+            defaults={"source_rule": rule},
+        )
+
+
+def remove_rule_backups_for_relationship(rel):
+    """
+    When an ApproverRelationship is deleted, remove inherited BackupApprover records.
+    """
+    BackupApprover.objects.filter(
+        relationship=rel,
+        source_rule__isnull=False,
+    ).delete()

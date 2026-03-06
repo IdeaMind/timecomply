@@ -3,6 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
 from django.shortcuts import get_object_or_404, redirect, render
 
+from apps.timesheets.models import TimeEntry
+
 from .models import Project
 
 
@@ -267,7 +269,7 @@ def project_update(request, pk):
                 request,
                 f'Labor category "{timekeeping_code} — {name}" saved.',
             )
-            return redirect("projects:update", pk=project.pk)
+            return redirect("projects:list")
         except IntegrityError:
             messages.error(
                 request,
@@ -310,6 +312,36 @@ def project_archive(request, pk):
         return redirect("projects:list")
 
     return render(request, "projects/confirm_archive.html", {"project": project})
+
+
+@login_required
+def project_delete(request, pk):
+    if _require_admin(request) is None:
+        messages.error(request, "Only company admins can manage labor categories.")
+        return redirect("projects:list")
+
+    company = request.company
+    project = get_object_or_404(Project, pk=pk, company=company)
+
+    if request.method == "POST":
+        if TimeEntry.objects.filter(labor_category=project).exists():
+            messages.error(
+                request,
+                f'Cannot delete "{project.timekeeping_code} — {project.name}" because '
+                "it has time entries. Archive it instead to hide it from future use.",
+            )
+            return redirect("projects:update", pk=project.pk)
+        name = str(project)
+        project.delete()
+        messages.success(request, f'Labor category "{name}" deleted.')
+        return redirect("projects:list")
+
+    has_entries = TimeEntry.objects.filter(labor_category=project).exists()
+    return render(
+        request,
+        "projects/confirm_delete.html",
+        {"project": project, "has_entries": has_entries},
+    )
 
 
 @login_required

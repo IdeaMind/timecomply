@@ -30,7 +30,6 @@ def test_registration_creates_company_with_defaults(client):
     assert company.name == "Test Corp"
     assert company.settings["period_type"] == "biweekly"
     assert company.settings["timezone"] == "America/Chicago"
-    assert company.settings["auto_close_hours"] is None
 
     membership = CompanyMembership.objects.get(user=user)
     assert membership.company == company
@@ -87,7 +86,7 @@ def test_settings_page_updates_company_settings(client):
     assert response.status_code == 302
     membership.company.refresh_from_db()
     assert membership.company.settings["period_type"] == "monthly"
-    assert membership.company.settings["auto_close_hours"] == 72
+    assert membership.company.auto_close_hours == 72
 
 
 @pytest.mark.django_db

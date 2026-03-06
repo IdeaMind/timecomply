@@ -5,8 +5,8 @@ from .models import TimeEntry, TimePeriod, Timesheet
 
 @admin.register(TimePeriod)
 class TimePeriodAdmin(admin.ModelAdmin):
-    list_display = ["company", "start_date", "end_date", "period_type", "status"]
-    list_filter = ["status", "period_type", "company"]
+    list_display = ["company", "start_date", "end_date", "status"]
+    list_filter = ["status", "company"]
     search_fields = ["company__name"]
     ordering = ["-start_date"]
 

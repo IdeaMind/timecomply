@@ -63,6 +63,7 @@
                   {% else %}
                     <a href="{% url 'projects:archive' project.pk %}" class="button button-outline button-small">Archive</a>
                   {% endif %}
+                  <a href="{% url 'projects:delete' project.pk %}" class="button button-outline button-small" style="color: #e74c3c; border-color: #e74c3c;">Delete</a>
                 </td>
               {% endif %}
             </tr>
