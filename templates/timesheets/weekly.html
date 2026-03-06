@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Timesheet — {{ period.start_date }} to {{ period.end_date }} — TimeComply{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="column">
+    <h2>Timesheet: {{ period.start_date }} — {{ period.end_date }}</h2>
+
+    <p>
+      Employee: <strong>{{ timesheet.employee.get_full_name|default:timesheet.employee.username }}</strong>
+      &nbsp;|&nbsp;
+      Status: <strong>{{ timesheet.get_status_display }}</strong>
+      {% if timesheet.submitted_at %}
+        &nbsp;|&nbsp; Submitted: {{ timesheet.submitted_at|date:"N j, Y" }}
+      {% endif %}
+    </p>
+
+    <p>
+      <a href="{% url 'timesheets:entry' %}" class="button button-outline button-small">Enter Time</a>
+      {% if timesheet.is_editable %}
+        <a href="{% url 'timesheets:submit_confirm' timesheet.pk %}" class="button button-small">Submit Timesheet</a>
+      {% endif %}
+    </p>
+
+    {% if grid %}
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Labor Category</th>
+              {% for d in period_dates %}
+                <th style="text-align:center; white-space:nowrap;">{{ d|date:"D" }}<br>{{ d|date:"m/d" }}</th>
+              {% endfor %}
+              <th style="text-align:center;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in grid %}
+              <tr>
+                <td style="white-space:nowrap;">{{ row.category.timekeeping_code }} — {{ row.category.name }}</td>
+                {% for entry in row.entries %}
+                  <td style="text-align:center;">
+                    {% if entry %}{{ entry.hours }}{% else %}—{% endif %}
+                  </td>
+                {% endfor %}
+                <td style="text-align:center;"><strong>{{ row.total }}</strong></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th>Daily Total</th>
+              {% for total in col_totals %}
+                <th style="text-align:center;">{{ total }}</th>
+              {% endfor %}
+              <th style="text-align:center;">{{ grand_total }}</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    {% else %}
+      <p>No time entries on this timesheet yet.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

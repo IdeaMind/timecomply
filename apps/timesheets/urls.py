@@ -5,6 +5,11 @@ from . import views
 app_name = "timesheets"
 
 urlpatterns = [
+    # Time entry
+    path("timesheets/enter/", views.entry_view, name="entry"),
+    path("timesheets/<uuid:pk>/", views.weekly_view, name="weekly"),
+    path("timesheets/<uuid:pk>/submit/", views.submit_confirm, name="submit_confirm"),
+    # Period management
     path("periods/", views.period_list, name="periods"),
     path("periods/create/", views.period_create, name="period_create"),
     path("periods/<uuid:pk>/close/", views.period_close, name="period_close"),
