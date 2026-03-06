@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Approver Setup — TimeComply{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="column">
+    <h2>Approver Relationships</h2>
+    <p>Configure primary and backup approvers for each employee in <strong>{{ company.name }}</strong>.</p>
+  </div>
+</div>
+
+{% if relationships %}
+<div class="row">
+  <div class="column">
+    <h3>Current Relationships</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Primary Approver</th>
+          <th>Backup Approvers</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rel in relationships %}
+        <tr>
+          <td>{{ rel.employee.get_full_name|default:rel.employee.username }}</td>
+          <td>{{ rel.primary_approver.get_full_name|default:rel.primary_approver.username }}</td>
+          <td>
+            {% if rel.backup_approvers.all %}
+              <ul style="margin: 0; padding-left: 1.5rem;">
+                {% for backup in rel.backup_approvers.all %}
+                <li>
+                  {{ backup.approver.get_full_name|default:backup.approver.username }}
+                  (priority {{ backup.priority }})
+                  <form method="post" action="{% url 'approvals:remove_backup_approver' backup.pk %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="button button-outline" style="padding: 0 0.5rem; font-size: 0.8rem; height: auto; line-height: 1.5; margin: 0;">Remove</button>
+                  </form>
+                </li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <em>None</em>
+            {% endif %}
+          </td>
+          <td>{% if rel.is_active %}Active{% else %}Inactive{% endif %}</td>
+          <td>
+            <form method="post" action="{% url 'approvals:add_backup_approver' rel.pk %}" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+              {% csrf_token %}
+              <select name="backup_approver_id" required style="margin-bottom:0; height:3rem;">
+                <option value="">-- Add backup --</option>
+                {% for approver in approver_users %}
+                  {% if approver != rel.employee %}
+                  <option value="{{ approver.pk }}">{{ approver.get_full_name|default:approver.username }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+              <input type="number" name="priority" value="1" min="1" placeholder="Priority" style="width:6rem; margin-bottom:0; height:3rem;">
+              <button type="submit" class="button" style="margin-bottom:0;">Add Backup</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="row">
+  <div class="column">
+    <p><em>No approver relationships configured yet.</em></p>
+  </div>
+</div>
+{% endif %}
+
+<div class="row">
+  <div class="column">
+    <h3>Assign Approver</h3>
+    {% if employees %}
+    <form method="post" action="{% url 'approvals:assign_approver' %}">
+      {% csrf_token %}
+      <div class="row">
+        <div class="column">
+          <label for="employee_id">Employee</label>
+          <select id="employee_id" name="employee_id" required>
+            <option value="">-- Select employee --</option>
+            {% for emp_membership in employees %}
+            <option value="{{ emp_membership.user.pk }}">
+              {{ emp_membership.user.get_full_name|default:emp_membership.user.username }}
+              ({{ emp_membership.user.email }})
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="column">
+          <label for="primary_approver_id">Primary Approver</label>
+          <select id="primary_approver_id" name="primary_approver_id" required>
+            <option value="">-- Select approver --</option>
+            {% for approver in approver_users %}
+            <option value="{{ approver.pk }}">
+              {{ approver.get_full_name|default:approver.username }}
+              ({{ approver.email }})
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="column">
+          {% if not approver_users %}
+          <p class="message message-warning">No users with approver or admin permissions found. Grant approver permissions to users first via <a href="{% url 'companies:members' %}">Members</a>.</p>
+          {% endif %}
+          <button type="submit" class="button" {% if not approver_users %}disabled{% endif %}>Save Relationship</button>
+        </div>
+      </div>
+    </form>
+    {% else %}
+    <p class="message message-warning">No employees found. Mark users as employees via <a href="{% url 'companies:members' %}">Members</a>.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
