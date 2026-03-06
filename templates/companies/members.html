@@ -28,18 +28,18 @@
         </thead>
         <tbody>
           {% for m in members %}
+            <form id="member-form-{{ m.pk }}" method="post" action="{% url 'companies:update-member' m.pk %}">
+              {% csrf_token %}
+            </form>
             <tr>
               <td>{{ m.user.get_full_name|default:m.user.username }}</td>
               <td>{{ m.user.email }}</td>
-              <form method="post" action="{% url 'companies:update-member' m.pk %}">
-                {% csrf_token %}
-                <td><input type="checkbox" name="is_employee" {% if m.is_employee %}checked{% endif %}></td>
-                <td><input type="checkbox" name="is_approver" {% if m.is_approver %}checked{% endif %}></td>
-                <td><input type="checkbox" name="is_admin" {% if m.is_admin %}checked{% endif %}></td>
-                <td><input type="checkbox" name="is_period_manager" {% if m.is_period_manager %}checked{% endif %}></td>
-                <td>{{ m.created_at|date:"N j, Y" }}</td>
-                <td><button type="submit" class="button button-outline">Save</button></td>
-              </form>
+              <td><input form="member-form-{{ m.pk }}" type="checkbox" name="is_employee" {% if m.is_employee %}checked{% endif %}></td>
+              <td><input form="member-form-{{ m.pk }}" type="checkbox" name="is_approver" {% if m.is_approver %}checked{% endif %}></td>
+              <td><input form="member-form-{{ m.pk }}" type="checkbox" name="is_admin" {% if m.is_admin %}checked{% endif %}></td>
+              <td><input form="member-form-{{ m.pk }}" type="checkbox" name="is_period_manager" {% if m.is_period_manager %}checked{% endif %}></td>
+              <td>{{ m.created_at|date:"N j, Y" }}</td>
+              <td><button form="member-form-{{ m.pk }}" type="submit" class="button button-outline">Save</button></td>
             </tr>
           {% endfor %}
         </tbody>
