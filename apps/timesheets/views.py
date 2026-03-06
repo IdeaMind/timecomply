@@ -2,9 +2,11 @@ from datetime import date, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from apps.approvals.models import get_approver_for
 from apps.projects.models import Project
 
 from .forms import TimeEntryForm
@@ -19,6 +21,23 @@ PERIOD_TYPE_CHOICES = [
 ]
 
 _ACCESS_DENIED_MSG = "Only period managers and admins can manage pay periods."
+
+
+def _notify_approver(timesheet, approver, request):
+    """Send an email to the approver when a timesheet is submitted."""
+    employee_name = timesheet.employee.get_full_name() or timesheet.employee.username
+    period = timesheet.period
+    subject = f"[TimeComply] Timesheet pending approval: {employee_name}"
+    timesheet_url = request.build_absolute_uri(f"/timesheets/{timesheet.pk}/")
+    body = (
+        f"Hello {approver.get_full_name() or approver.username},\n\n"
+        f"{employee_name} has submitted a timesheet for the period "
+        f"{period.start_date} \u2014 {period.end_date} and it is awaiting your"
+        " approval.\n\n"
+        f"View timesheet: {timesheet_url}\n\n"
+        f"\u2014 TimeComply"
+    )
+    send_mail(subject, body, None, [approver.email], fail_silently=True)
 
 
 def _can_manage_periods(user, company):
@@ -179,6 +198,13 @@ def weekly_view(request, pk):
 
     grand_total = sum(col_totals)
 
+    can_submit = (
+        timesheet.employee == request.user
+        and timesheet.is_editable
+        and membership is not None
+        and membership.is_employee
+    )
+
     return render(
         request,
         "timesheets/weekly.html",
@@ -189,6 +215,7 @@ def weekly_view(request, pk):
             "grid": grid,
             "col_totals": col_totals,
             "grand_total": grand_total,
+            "can_submit": can_submit,
         },
     )
 
@@ -200,14 +227,32 @@ def submit_confirm(request, pk):
         Timesheet, pk=pk, company=company, employee=request.user
     )
 
+    membership = getattr(request.user, "membership", None)
+    if not membership or not membership.is_employee:
+        messages.error(request, "Only employees can submit timesheets.")
+        return redirect("timesheets:weekly", pk=pk)
+
     if not timesheet.is_editable:
         messages.error(request, "This timesheet has already been submitted.")
+        return redirect("timesheets:weekly", pk=pk)
+
+    if not timesheet.entries.exists():
+        messages.error(request, "Cannot submit an empty timesheet.")
+        return redirect("timesheets:weekly", pk=pk)
+
+    approver = get_approver_for(request.user, company)
+    if not approver:
+        messages.error(
+            request,
+            "No approver configured. Contact your administrator.",
+        )
         return redirect("timesheets:weekly", pk=pk)
 
     if request.method == "POST":
         timesheet.status = "submitted"
         timesheet.submitted_at = timezone.now()
         timesheet.save(update_fields=["status", "submitted_at", "updated_at"])
+        _notify_approver(timesheet, approver, request)
         messages.success(request, "Timesheet submitted successfully.")
         return redirect("timesheets:weekly", pk=pk)
 
@@ -215,6 +260,21 @@ def submit_confirm(request, pk):
         request,
         "timesheets/submit_confirm.html",
         {"timesheet": timesheet},
+    )
+
+
+@login_required
+def timesheet_list(request):
+    company = request.company
+    timesheets = (
+        Timesheet.objects.filter(employee=request.user, company=company)
+        .select_related("period")
+        .order_by("-period__start_date")
+    )
+    return render(
+        request,
+        "timesheets/list.html",
+        {"timesheets": timesheets},
     )
 
 
