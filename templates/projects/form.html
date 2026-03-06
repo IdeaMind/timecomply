@@ -51,6 +51,9 @@
       <p>
         <button type="submit" class="button">{% if project %}Save Changes{% else %}Create{% endif %}</button>
         <a href="{% url 'projects:list' %}" class="button button-outline">Cancel</a>
+        {% if project %}
+          <a href="{% url 'projects:delete' project.pk %}" class="button button-outline" style="color: #e74c3c; border-color: #e74c3c;">Delete</a>
+        {% endif %}
       </p>
     </form>
   </div>

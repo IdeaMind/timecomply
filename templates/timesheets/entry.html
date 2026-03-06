@@ -8,87 +8,138 @@
     <h2>Enter Time</h2>
 
     {% if no_period %}
-      <p class="message message-warning">No active pay period. Please contact your period manager to open a period.</p>
+      <p>No active pay period. Please contact your period manager to open a period.</p>
     {% else %}
+
+      {# Navigation #}
       <p>
-        Period: <strong>{{ period.start_date }} — {{ period.end_date }}</strong>
-        &nbsp;|&nbsp;
-        Status: <strong>{{ timesheet.get_status_display }}</strong>
-        &nbsp;|&nbsp;
-        <a href="{% url 'timesheets:weekly' timesheet.pk %}">View Full Timesheet</a>
-        {% if timesheet.is_editable %}
-          &nbsp;|&nbsp;
-          <a href="{% url 'timesheets:submit_confirm' timesheet.pk %}">Submit Timesheet</a>
+        {% if prev_period %}
+          <a href="{% url 'timesheets:entry' %}?period={{ prev_period.pk }}" class="button button-outline button-small">&larr; Previous</a>
+        {% else %}
+          <button class="button button-outline button-small" disabled>&larr; Previous</button>
+        {% endif %}
+
+        <a href="{% url 'timesheets:entry' %}" class="button button-outline button-small">Current</a>
+
+        {% if next_period %}
+          <a href="{% url 'timesheets:entry' %}?period={{ next_period.pk }}" class="button button-outline button-small">Next &rarr;</a>
+        {% else %}
+          <button class="button button-outline button-small" disabled>Next &rarr;</button>
         {% endif %}
       </p>
 
-      <h3>Entries for {{ entry_date }}</h3>
+      {# Period info #}
+      <p>
+        Period: <strong>{{ period.start_date }} — {{ period.end_date }}</strong>
+        &nbsp;|&nbsp;
+        Status: <strong>{{ period.get_status_display }}</strong>
+        &nbsp;|&nbsp;
+        Timesheet: <strong>{{ timesheet.get_status_display }}</strong>
+        {% if can_submit %}
+          &nbsp;|&nbsp;
+          <a href="{% url 'timesheets:submit_confirm' timesheet.pk %}">Submit for Approval</a>
+        {% endif %}
+        &nbsp;|&nbsp;
+        <a href="{% url 'timesheets:preset_manage' %}">Manage Presets</a>
+      </p>
 
-      {% if today_entries %}
-        <table>
-          <thead>
-            <tr>
-              <th>Labor Category</th>
-              <th>Hours</th>
-              <th>Notes</th>
-              {% if timesheet.is_editable %}<th>Actions</th>{% endif %}
-            </tr>
-          </thead>
-          <tbody>
-            {% for entry in today_entries %}
+      {% if read_only %}
+        <p><em>
+          {% if period.status == "future" %}
+            This period has not started yet — editing is disabled.
+          {% elif period.status == "closed" %}
+            This period is closed — editing is disabled.
+          {% else %}
+            This timesheet is <strong>{{ timesheet.get_status_display }}</strong> and can no longer be edited.
+          {% endif %}
+        </em></p>
+      {% endif %}
+
+      {# Weekly grid #}
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save_grid">
+        {% for row in grid %}
+          <input type="hidden" name="category_ids" value="{{ row.category.pk }}">
+        {% endfor %}
+
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
               <tr>
-                <td>{{ entry.labor_category.timekeeping_code }} — {{ entry.labor_category.name }}</td>
-                <td>{{ entry.hours }}</td>
-                <td>{{ entry.notes|default:"—" }}</td>
-                {% if timesheet.is_editable %}
-                  <td>
-                    <form method="post" style="display:inline;">
-                      {% csrf_token %}
-                      <input type="hidden" name="action" value="delete">
-                      <input type="hidden" name="entry_id" value="{{ entry.pk }}">
-                      <button type="submit" class="button button-outline button-small"
-                              onclick="return confirm('Delete this entry?')">Delete</button>
-                    </form>
-                  </td>
-                {% endif %}
+                <th>Labor Category</th>
+                {% for d in period_dates %}
+                  <th style="text-align:center; white-space:nowrap;">{{ d|date:"D" }}<br>{{ d|date:"m/d" }}</th>
+                {% endfor %}
+                <th style="text-align:center;">Total</th>
               </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      {% else %}
-        <p>No entries for {{ entry_date }} yet.</p>
+            </thead>
+            <tbody>
+              {% for row in grid %}
+                <tr>
+                  <td style="white-space:nowrap;">{{ row.category.timekeeping_code }} — {{ row.category.name }}</td>
+                  {% for cell in row.cells %}
+                    <td style="text-align:center; padding: 0.2rem;">
+                      {% if read_only %}
+                        {{ cell.entry.hours|default:"—" }}
+                      {% else %}
+                        <input type="number"
+                               name="hours_{{ row.category.pk }}_{{ cell.date|date:'Y-m-d' }}"
+                               value="{{ cell.entry.hours|default:'' }}"
+                               step="0.25" min="0" max="24"
+                               style="width:4.5rem; text-align:center; padding:0.2rem;">
+                      {% endif %}
+                    </td>
+                  {% endfor %}
+                  <td style="text-align:center;"><strong>{{ row.total }}</strong></td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="99" style="text-align:center;"><em>No labor categories yet. Add one below or <a href="{% url 'timesheets:preset_manage' %}">manage presets</a>.</em></td></tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th>Daily Total</th>
+                {% for total in col_totals %}
+                  <th style="text-align:center;">{{ total }}</th>
+                {% endfor %}
+                <th style="text-align:center;">{{ grand_total }}</th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        {% if not read_only %}
+          <p style="margin-top: 0.5rem;">
+            <button type="submit" class="button">Save Timesheet</button>
+          </p>
+        {% endif %}
+      </form>
+
+      {# Add Row form — only when editing is enabled #}
+      {% if not read_only %}
+        <div style="margin-top:1rem; padding:1rem; border:1px solid #d1d1d1; border-radius:4px;">
+          <strong>Add Labor Category Row</strong>
+          {% if available_cats %}
+            <form method="post" style="display:flex; gap:0.5rem; align-items:flex-end; flex-wrap:wrap; margin-top:0.5rem;">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="add_row">
+              <div>
+                <select id="add_category_id" name="add_category_id" required style="margin-bottom:0;">
+                  <option value="">— Select category —</option>
+                  {% for cat in available_cats %}
+                    <option value="{{ cat.pk }}">{{ cat.timekeeping_code }} — {{ cat.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <button type="submit" class="button button-outline" style="margin-bottom:0;">Add Row</button>
+            </form>
+          {% else %}
+            <p style="margin:0.5rem 0 0;"><em>All available labor categories are already on your timesheet.</em></p>
+          {% endif %}
+        </div>
       {% endif %}
 
-      {% if timesheet.is_editable %}
-        <h3>Add Entry</h3>
-        <form method="post">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="add">
-          <div class="row">
-            <div class="column">
-              <label for="id_labor_category">{{ form.labor_category.label }} <span style="color:red;">*</span></label>
-              {{ form.labor_category }}
-            </div>
-            <div class="column">
-              <label for="id_date">Date <span style="color:red;">*</span></label>
-              {{ form.date }}
-            </div>
-          </div>
-          <div class="row">
-            <div class="column">
-              <label for="id_hours">Hours <span style="color:red;">*</span></label>
-              {{ form.hours }}
-            </div>
-            <div class="column">
-              <label for="id_notes">Notes</label>
-              {{ form.notes }}
-            </div>
-          </div>
-          <button type="submit" class="button">Add Entry</button>
-        </form>
-      {% else %}
-        <p><em>This timesheet is <strong>{{ timesheet.get_status_display }}</strong> and can no longer be edited.</em></p>
-      {% endif %}
     {% endif %}
   </div>
 </div>

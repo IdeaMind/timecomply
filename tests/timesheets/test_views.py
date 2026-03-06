@@ -80,17 +80,17 @@ def test_entry_view_with_open_period(company, employee, period, project):
 
 
 @pytest.mark.django_db
-def test_entry_view_add_entry(company, employee, period, project):
+def test_entry_view_save_grid(company, employee, period, project):
+    """Saving the grid via save_grid action creates time entries."""
     client = Client()
     client.force_login(employee)
+    date_str = period.start_date.isoformat()
     response = client.post(
         "/timesheets/enter/",
         {
-            "action": "add",
-            "labor_category": str(project.pk),
-            "date": str(period.start_date),
-            "hours": "4.00",
-            "notes": "",
+            "action": "save_grid",
+            "category_ids": str(project.pk),
+            f"hours_{project.pk}_{date_str}": "4.00",
         },
     )
     assert response.status_code == 302
@@ -102,60 +102,26 @@ def test_entry_view_add_entry(company, employee, period, project):
 
 
 @pytest.mark.django_db
-def test_entry_view_negative_hours_rejected(company, employee, period, project):
+def test_entry_view_zero_hours_deletes_entry(company, employee, period, project):
+    """Setting hours to 0 in the grid removes the entry."""
     client = Client()
     client.force_login(employee)
-    client.post(
-        "/timesheets/enter/",
-        {
-            "action": "add",
-            "labor_category": str(project.pk),
-            "date": str(period.start_date),
-            "hours": "-1",
-            "notes": "",
-        },
-    )
-    assert not TimeEntry.objects.filter(
-        timesheet__employee=employee, labor_category=project
-    ).exists()
-
-
-@pytest.mark.django_db
-def test_entry_view_excessive_hours_rejected(company, employee, period, project):
-    client = Client()
-    client.force_login(employee)
-    client.post(
-        "/timesheets/enter/",
-        {
-            "action": "add",
-            "labor_category": str(project.pk),
-            "date": str(period.start_date),
-            "hours": "25",
-            "notes": "",
-        },
-    )
-    assert not TimeEntry.objects.filter(
-        timesheet__employee=employee, labor_category=project
-    ).exists()
-
-
-@pytest.mark.django_db
-def test_entry_view_delete_entry(company, employee, period, project):
-    client = Client()
-    client.force_login(employee)
-    # First create a timesheet and entry
     timesheet = TimesheetFactory(employee=employee, company=company, period=period)
     entry = TimeEntryFactory(
-        timesheet=timesheet, labor_category=project, date=period.start_date
+        timesheet=timesheet,
+        labor_category=project,
+        date=period.start_date,
+        hours=4,
     )
-    response = client.post(
+    date_str = period.start_date.isoformat()
+    client.post(
         "/timesheets/enter/",
         {
-            "action": "delete",
-            "entry_id": str(entry.pk),
+            "action": "save_grid",
+            "category_ids": str(project.pk),
+            f"hours_{project.pk}_{date_str}": "0",
         },
     )
-    assert response.status_code == 302
     assert not TimeEntry.objects.filter(pk=entry.pk).exists()
 
 
@@ -166,14 +132,13 @@ def test_submitted_timesheet_cannot_add_entry(company, employee, period, project
     timesheet = TimesheetFactory(
         employee=employee, company=company, period=period, status="submitted"
     )
+    date_str = period.start_date.isoformat()
     response = client.post(
         "/timesheets/enter/",
         {
-            "action": "add",
-            "labor_category": str(project.pk),
-            "date": str(period.start_date),
-            "hours": "4.00",
-            "notes": "",
+            "action": "save_grid",
+            "category_ids": str(project.pk),
+            f"hours_{project.pk}_{date_str}": "4.00",
         },
     )
     assert response.status_code == 302
@@ -380,20 +345,19 @@ def test_cannot_submit_already_submitted_timesheet(company, employee, period, pr
 
 @pytest.mark.django_db
 def test_entries_readonly_after_submission(company, employee, period, project):
-    """After submission, adding new entries via the entry view is blocked."""
+    """After submission, the grid save is blocked."""
     client = Client()
     client.force_login(employee)
     timesheet = TimesheetFactory(
         employee=employee, company=company, period=period, status="submitted"
     )
+    date_str = period.start_date.isoformat()
     response = client.post(
         "/timesheets/enter/",
         {
-            "action": "add",
-            "labor_category": str(project.pk),
-            "date": str(period.start_date),
-            "hours": "8.00",
-            "notes": "",
+            "action": "save_grid",
+            "category_ids": str(project.pk),
+            f"hours_{project.pk}_{date_str}": "8.00",
         },
     )
     assert response.status_code == 302

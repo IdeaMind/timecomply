@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Presets — TimeComply{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="column">
+    <h2>Manage Timesheet Presets</h2>
+    <p>
+      Preset labor categories appear as rows on your timesheet grid every period,
+      even if you have no entries yet.
+    </p>
+    <p><a href="{% url 'timesheets:entry' %}" class="button button-outline button-small">&larr; Back to Timesheet</a></p>
+
+    <h3>Your Presets</h3>
+    {% if presets %}
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for preset in presets %}
+            <tr>
+              <td>{{ preset.labor_category.timekeeping_code }}</td>
+              <td>{{ preset.labor_category.name }}</td>
+              <td>
+                <form method="post" style="display:inline;">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="remove">
+                  <input type="hidden" name="category_id" value="{{ preset.labor_category.pk }}">
+                  <button type="submit" class="button button-outline button-small" style="color:#e74c3c; border-color:#e74c3c;">Remove</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p><em>No presets configured yet.</em></p>
+    {% endif %}
+
+    <h3>Add Preset</h3>
+    {% if available_categories %}
+      <form method="post" style="display:flex; gap:0.5rem; align-items:flex-end; flex-wrap:wrap;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        <div>
+          <label for="category_id">Labor Category</label>
+          <select id="category_id" name="category_id" required style="margin-bottom:0;">
+            <option value="">— Select category —</option>
+            {% for cat in available_categories %}
+              <option value="{{ cat.pk }}">{{ cat.timekeeping_code }} — {{ cat.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="button" style="margin-bottom:0;">Add Preset</button>
+      </form>
+    {% else %}
+      <p><em>All available labor categories are already in your presets.</em></p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

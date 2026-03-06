@@ -20,7 +20,7 @@ from tests.companies.factories import (
 
 @pytest.fixture
 def company():
-    return CompanyFactory(settings={"period_type": "weekly", "auto_close_hours": None})
+    return CompanyFactory(settings={"period_type": "weekly"})
 
 
 @pytest.fixture
@@ -44,16 +44,12 @@ def employee_user(company):
     return user
 
 
-def make_period(
-    company, start, end, period_type="weekly", status="open", auto_close_hours=None
-):
+def make_period(company, start, end, status="open"):
     return TimePeriod.objects.create(
         company=company,
         start_date=start,
         end_date=end,
-        period_type=period_type,
         status=status,
-        auto_close_hours=auto_close_hours,
     )
 
 
@@ -64,9 +60,9 @@ def make_period(
 
 @pytest.mark.django_db
 def test_weekly_next_period_calculation(company):
-    period = make_period(
-        company, date(2025, 1, 6), date(2025, 1, 12), period_type="weekly"
-    )
+    company.settings = {**company.settings, "period_type": "weekly"}
+    company.save()
+    period = make_period(company, date(2025, 1, 6), date(2025, 1, 12))
     start, end = calculate_next_period_dates(company, period)
     assert start == date(2025, 1, 13)
     assert end == date(2025, 1, 19)
@@ -74,9 +70,9 @@ def test_weekly_next_period_calculation(company):
 
 @pytest.mark.django_db
 def test_biweekly_next_period_calculation(company):
-    period = make_period(
-        company, date(2025, 1, 6), date(2025, 1, 19), period_type="biweekly"
-    )
+    company.settings = {**company.settings, "period_type": "biweekly"}
+    company.save()
+    period = make_period(company, date(2025, 1, 6), date(2025, 1, 19))
     start, end = calculate_next_period_dates(company, period)
     assert start == date(2025, 1, 20)
     assert end == date(2025, 2, 2)
@@ -84,10 +80,9 @@ def test_biweekly_next_period_calculation(company):
 
 @pytest.mark.django_db
 def test_semimonthly_period_calculations_first_half(company):
-    # Period ending on 15th → next is 16th to EOM
-    period = make_period(
-        company, date(2025, 1, 1), date(2025, 1, 15), period_type="semimonthly"
-    )
+    company.settings = {**company.settings, "period_type": "semimonthly"}
+    company.save()
+    period = make_period(company, date(2025, 1, 1), date(2025, 1, 15))
     start, end = calculate_next_period_dates(company, period)
     assert start == date(2025, 1, 16)
     assert end == date(2025, 1, 31)
@@ -95,10 +90,9 @@ def test_semimonthly_period_calculations_first_half(company):
 
 @pytest.mark.django_db
 def test_semimonthly_period_calculations_second_half(company):
-    # Period ending at EOM → next is 1st to 15th of next month
-    period = make_period(
-        company, date(2025, 1, 16), date(2025, 1, 31), period_type="semimonthly"
-    )
+    company.settings = {**company.settings, "period_type": "semimonthly"}
+    company.save()
+    period = make_period(company, date(2025, 1, 16), date(2025, 1, 31))
     start, end = calculate_next_period_dates(company, period)
     assert start == date(2025, 2, 1)
     assert end == date(2025, 2, 15)
@@ -106,10 +100,9 @@ def test_semimonthly_period_calculations_second_half(company):
 
 @pytest.mark.django_db
 def test_semimonthly_period_feb_leap_year(company):
-    # Feb 1-15 → Feb 16 to Feb 29 (2024 is a leap year)
-    period = make_period(
-        company, date(2024, 2, 1), date(2024, 2, 15), period_type="semimonthly"
-    )
+    company.settings = {**company.settings, "period_type": "semimonthly"}
+    company.save()
+    period = make_period(company, date(2024, 2, 1), date(2024, 2, 15))
     start, end = calculate_next_period_dates(company, period)
     assert start == date(2024, 2, 16)
     assert end == date(2024, 2, 29)
@@ -117,10 +110,9 @@ def test_semimonthly_period_feb_leap_year(company):
 
 @pytest.mark.django_db
 def test_semimonthly_period_feb_non_leap_year(company):
-    # Feb 1-15 → Feb 16 to Feb 28 (2025 is not a leap year)
-    period = make_period(
-        company, date(2025, 2, 1), date(2025, 2, 15), period_type="semimonthly"
-    )
+    company.settings = {**company.settings, "period_type": "semimonthly"}
+    company.save()
+    period = make_period(company, date(2025, 2, 1), date(2025, 2, 15))
     start, end = calculate_next_period_dates(company, period)
     assert start == date(2025, 2, 16)
     assert end == date(2025, 2, 28)
@@ -128,9 +120,9 @@ def test_semimonthly_period_feb_non_leap_year(company):
 
 @pytest.mark.django_db
 def test_monthly_period_calculations(company):
-    period = make_period(
-        company, date(2025, 1, 1), date(2025, 1, 31), period_type="monthly"
-    )
+    company.settings = {**company.settings, "period_type": "monthly"}
+    company.save()
+    period = make_period(company, date(2025, 1, 1), date(2025, 1, 31))
     start, end = calculate_next_period_dates(company, period)
     assert start == date(2025, 2, 1)
     assert end == date(2025, 2, 28)
@@ -138,9 +130,9 @@ def test_monthly_period_calculations(company):
 
 @pytest.mark.django_db
 def test_monthly_period_december_to_january(company):
-    period = make_period(
-        company, date(2024, 12, 1), date(2024, 12, 31), period_type="monthly"
-    )
+    company.settings = {**company.settings, "period_type": "monthly"}
+    company.save()
+    period = make_period(company, date(2024, 12, 1), date(2024, 12, 31))
     start, end = calculate_next_period_dates(company, period)
     assert start == date(2025, 1, 1)
     assert end == date(2025, 1, 31)
@@ -160,8 +152,6 @@ def test_overlapping_period_rejected(company, admin_user):
         "/periods/create/",
         {
             "start_date": "2025-01-10",
-            "end_date": "2025-01-17",
-            "period_type": "weekly",
         },
     )
     # Should redirect back to list with an error message
@@ -179,8 +169,6 @@ def test_non_overlapping_period_accepted(company, admin_user):
         "/periods/create/",
         {
             "start_date": "2025-01-13",
-            "end_date": "2025-01-19",
-            "period_type": "weekly",
         },
     )
     assert response.status_code == 302
@@ -220,14 +208,9 @@ def test_get_current_period_returns_none_when_no_periods(company):
 
 @pytest.mark.django_db
 def test_auto_close_triggers_after_all_approved(company):
-    # Period that ended >24 hours ago with auto_close_hours=24
-    period = make_period(
-        company,
-        date(2025, 1, 1),
-        date(2025, 1, 7),
-        status="open",
-        auto_close_hours=24,
-    )
+    company.auto_close_hours = 24
+    company.save()
+    period = make_period(company, date(2025, 1, 1), date(2025, 1, 7), status="open")
     future_now = datetime(2025, 1, 10, 12, 0, 0, tzinfo=dt_tz.utc)
     with patch.object(tz_module, "now", return_value=future_now):
         call_command("auto_close_periods", verbosity=0)
@@ -238,15 +221,10 @@ def test_auto_close_triggers_after_all_approved(company):
 
 @pytest.mark.django_db
 def test_auto_close_does_not_trigger_if_timesheets_pending(company):
-    # Period ended, but only 1 hour has passed — cutoff not yet met
-    period = make_period(
-        company,
-        date(2025, 1, 1),
-        date(2025, 1, 7),
-        status="open",
-        auto_close_hours=24,
-    )
-    # Only 1 hour after end of period
+    company.auto_close_hours = 24
+    company.save()
+    period = make_period(company, date(2025, 1, 1), date(2025, 1, 7), status="open")
+    # Only 1 hour after end of period — not enough
     slightly_after = datetime(2025, 1, 8, 1, 0, 0, tzinfo=dt_tz.utc)
     with patch.object(tz_module, "now", return_value=slightly_after):
         call_command("auto_close_periods", verbosity=0)
@@ -257,13 +235,8 @@ def test_auto_close_does_not_trigger_if_timesheets_pending(company):
 
 @pytest.mark.django_db
 def test_auto_close_skips_periods_without_auto_close_hours(company):
-    period = make_period(
-        company,
-        date(2025, 1, 1),
-        date(2025, 1, 7),
-        status="open",
-        auto_close_hours=None,
-    )
+    # company.auto_close_hours is None by default — nothing should close
+    period = make_period(company, date(2025, 1, 1), date(2025, 1, 7), status="open")
     call_command("auto_close_periods", verbosity=0)
     period.refresh_from_db()
     assert period.status == "open"
@@ -276,7 +249,7 @@ def test_auto_close_skips_periods_without_auto_close_hours(company):
 
 @pytest.mark.django_db
 def test_open_next_period_creates_next_weekly(company):
-    make_period(company, date(2025, 1, 6), date(2025, 1, 12), period_type="weekly")
+    make_period(company, date(2025, 1, 6), date(2025, 1, 12))
     call_command("open_next_period", verbosity=0)
     assert TimePeriod.objects.filter(company=company).count() == 2
     new_period = (
@@ -288,21 +261,16 @@ def test_open_next_period_creates_next_weekly(company):
 
 @pytest.mark.django_db
 def test_open_next_period_skips_if_overlap_exists(company):
-    """Command skips if the calculated next period overlaps an existing one.
-
-    Most recent is Jan 13-19; calculated next is Jan 20-26.
-    An older period (Dec 30 - Jan 22) overlaps that range → command skips.
-    """
-    make_period(company, date(2025, 1, 13), date(2025, 1, 19), period_type="weekly")
+    """Command skips if the calculated next period overlaps an existing one."""
+    make_period(company, date(2025, 1, 13), date(2025, 1, 19))
     # Older period whose end_date falls inside the calculated next range (Jan 20-26)
-    make_period(company, date(2024, 12, 30), date(2025, 1, 22), period_type="weekly")
+    make_period(company, date(2024, 12, 30), date(2025, 1, 22))
     call_command("open_next_period", verbosity=0)
     assert TimePeriod.objects.filter(company=company).count() == 2
 
 
 @pytest.mark.django_db
 def test_open_next_period_skips_companies_with_no_periods(company):
-    # No periods exist — command should warn and not crash
     call_command("open_next_period", verbosity=0)
     assert TimePeriod.objects.filter(company=company).count() == 0
 
@@ -350,10 +318,8 @@ def test_employee_without_period_manager_flag_cannot_manage(company, employee_us
     period = make_period(company, date(2025, 1, 6), date(2025, 1, 12), status="open")
     client = Client()
     client.force_login(employee_user)
-    # GET to list should redirect
     response = client.get("/periods/")
     assert response.status_code == 302
-    # POST to close should also be denied
     response = client.post(f"/periods/{period.pk}/close/")
     assert response.status_code == 302
     period.refresh_from_db()

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Pay Period — TimeComply{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="column column-50 column-offset-25">
+    <h2>Delete Pay Period</h2>
+
+    {% if has_timesheets %}
+      <p>
+        Cannot delete period <strong>{{ period.start_date }} — {{ period.end_date }}</strong>
+        because it has timesheets. Close the period instead.
+      </p>
+      <p>
+        <form method="post" action="{% url 'timesheets:period_close' period.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="button">Close Period</button>
+        </form>
+        <a href="{% url 'timesheets:periods' %}" class="button button-outline">Back to Periods</a>
+      </p>
+    {% else %}
+      <p>
+        Are you sure you want to permanently delete the period
+        <strong>{{ period.start_date }} — {{ period.end_date }}</strong>
+        ({{ period.get_status_display }})?
+        This cannot be undone.
+      </p>
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="button" style="background-color:#e74c3c; border-color:#e74c3c;">Delete Period</button>
+        <a href="{% url 'timesheets:periods' %}" class="button button-outline">Cancel</a>
+      </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

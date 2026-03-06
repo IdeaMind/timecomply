@@ -83,6 +83,7 @@ def company_settings(request):
         period_type = request.POST.get("period_type", "weekly")
         timezone = request.POST.get("timezone", "America/New_York")
         auto_close_hours_raw = request.POST.get("auto_close_hours", "").strip()
+        auto_open = request.POST.get("auto_open") == "on"
 
         auto_close_hours = None
         if auto_close_hours_raw:
@@ -104,8 +105,9 @@ def company_settings(request):
             **company.settings,
             "period_type": period_type,
             "timezone": timezone,
-            "auto_close_hours": auto_close_hours,
         }
+        company.auto_close_hours = auto_close_hours
+        company.auto_open = auto_open
         company.save()
         messages.success(request, "Settings updated.")
         return redirect("companies:settings")

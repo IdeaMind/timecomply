@@ -10,8 +10,6 @@ def test_company_settings_defaults_applied_on_save():
     company = CompanyFactory(settings={})
     assert company.settings["period_type"] == COMPANY_SETTINGS_DEFAULTS["period_type"]
     assert company.settings["timezone"] == COMPANY_SETTINGS_DEFAULTS["timezone"]
-    expected = COMPANY_SETTINGS_DEFAULTS["auto_close_hours"]
-    assert company.settings["auto_close_hours"] == expected
 
 
 @pytest.mark.django_db

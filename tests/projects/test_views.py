@@ -181,7 +181,7 @@ def test_admin_can_edit_project(client):
 
 
 @pytest.mark.django_db
-def test_edit_project_redirects_to_edit_form(client):
+def test_edit_project_redirects_to_project_list(client):
     membership = CompanyMembershipFactory(is_admin=True)
     project = ProjectFactory(company=membership.company, timekeeping_code="OLD")
 
@@ -195,7 +195,7 @@ def test_edit_project_redirects_to_edit_form(client):
         },
     )
     assert response.status_code == 302
-    assert f"/projects/{project.pk}/edit/" in response["Location"]
+    assert response["Location"] == "/projects/"
 
 
 @pytest.mark.django_db

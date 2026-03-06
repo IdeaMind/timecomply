@@ -8,38 +8,24 @@
     <h2>Pay Periods — {{ company.name }}</h2>
 
     <h3>Create New Period</h3>
+    <p>
+      Period type: <strong>{{ period_type_label }}</strong>
+      (configured in <a href="{% url 'companies:settings' %}">Company Settings</a>)
+    </p>
     <form method="post" action="{% url 'timesheets:period_create' %}">
       {% csrf_token %}
       <div class="row">
-        <div class="column">
-          <label for="start_date">Start Date</label>
+        <div class="column column-25">
+          <label for="start_date">Start Date <span style="color:red;">*</span></label>
           <input type="date" id="start_date" name="start_date"
                  value="{{ suggested_start|date:'Y-m-d' }}">
-        </div>
-        <div class="column">
-          <label for="end_date">End Date</label>
-          <input type="date" id="end_date" name="end_date"
-                 value="{{ suggested_end|date:'Y-m-d' }}">
+          <small>End date is calculated automatically from the period type.</small>
         </div>
       </div>
-      <div class="row">
-        <div class="column">
-          <label for="period_type">Period Type</label>
-          <select id="period_type" name="period_type">
-            {% for value, label in period_type_choices %}
-              <option value="{{ value }}"{% if value == period_type %} selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="column">
-          <label for="auto_close_hours">Auto-close Hours (optional)</label>
-          <input type="number" id="auto_close_hours" name="auto_close_hours"
-                 min="1" placeholder="e.g. 24">
-          <small>Hours after last timesheet approval to auto-close. Leave blank to disable.</small>
-        </div>
-      </div>
-      <button type="submit" class="button">Create Period</button>
-      <a href="/dashboard/" class="button button-outline">Back to Dashboard</a>
+      <p>
+        <button type="submit" class="button">Create Period</button>
+        <a href="/dashboard/" class="button button-outline">Back to Dashboard</a>
+      </p>
     </form>
 
     <hr>
@@ -51,9 +37,7 @@
           <tr>
             <th>Start</th>
             <th>End</th>
-            <th>Type</th>
             <th>Status</th>
-            <th>Auto-close After</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -62,19 +46,13 @@
             <tr>
               <td>{{ period.start_date }}</td>
               <td>{{ period.end_date }}</td>
-              <td>{{ period.get_period_type_display }}</td>
               <td>
                 {% if period.status == "open" %}
                   <strong>Open</strong>
+                {% elif period.status == "future" %}
+                  <em>Future</em>
                 {% else %}
                   Closed
-                {% endif %}
-              </td>
-              <td>
-                {% if period.auto_close_hours %}
-                  {{ period.auto_close_hours }}h
-                {% else %}
-                  —
                 {% endif %}
               </td>
               <td>
@@ -83,11 +61,19 @@
                     {% csrf_token %}
                     <button type="submit" class="button button-outline button-small">Close</button>
                   </form>
+                {% elif period.status == "future" %}
+                  <form method="post" action="{% url 'timesheets:period_open' period.pk %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="button button-outline button-small">Open Now</button>
+                  </form>
                 {% else %}
                   <form method="post" action="{% url 'timesheets:period_open' period.pk %}" style="display:inline;">
                     {% csrf_token %}
                     <button type="submit" class="button button-outline button-small">Reopen</button>
                   </form>
+                {% endif %}
+                {% if not period.timesheets.exists %}
+                  <a href="{% url 'timesheets:period_delete' period.pk %}" class="button button-outline button-small" style="color:#e74c3c; border-color:#e74c3c;">Delete</a>
                 {% endif %}
               </td>
             </tr>

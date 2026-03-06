@@ -5,122 +5,159 @@
 {% block content %}
 <div class="row">
   <div class="column">
-    <h2>Approver Relationships</h2>
-    <p>Configure primary and backup approvers for each employee in <strong>{{ company.name }}</strong>.</p>
+    <h2>Approver Setup</h2>
+    <p>Configure supervisor–employee relationships for <strong>{{ company.name }}</strong>.</p>
+    <p><a href="/dashboard/" class="button button-outline button-small">Back to Dashboard</a></p>
   </div>
 </div>
 
-{% if relationships %}
+{% if not supervisor_data %}
 <div class="row">
   <div class="column">
-    <h3>Current Relationships</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Employee</th>
-          <th>Primary Approver</th>
-          <th>Backup Approvers</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for rel in relationships %}
-        <tr>
-          <td>{{ rel.employee.get_full_name|default:rel.employee.username }}</td>
-          <td>{{ rel.primary_approver.get_full_name|default:rel.primary_approver.username }}</td>
-          <td>
-            {% if rel.backup_approvers.all %}
-              <ul style="margin: 0; padding-left: 1.5rem;">
-                {% for backup in rel.backup_approvers.all %}
-                <li>
-                  {{ backup.approver.get_full_name|default:backup.approver.username }}
-                  (priority {{ backup.priority }})
-                  <form method="post" action="{% url 'approvals:remove_backup_approver' backup.pk %}" style="display:inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="button button-outline" style="padding: 0 0.5rem; font-size: 0.8rem; height: auto; line-height: 1.5; margin: 0;">Remove</button>
-                  </form>
-                </li>
-                {% endfor %}
-              </ul>
-            {% else %}
-              <em>None</em>
-            {% endif %}
-          </td>
-          <td>{% if rel.is_active %}Active{% else %}Inactive{% endif %}</td>
-          <td>
-            <form method="post" action="{% url 'approvals:add_backup_approver' rel.pk %}" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
-              {% csrf_token %}
-              <select name="backup_approver_id" required style="margin-bottom:0; height:3rem;">
-                <option value="">-- Add backup --</option>
-                {% for approver in approver_users %}
-                  {% if approver != rel.employee %}
-                  <option value="{{ approver.pk }}">{{ approver.get_full_name|default:approver.username }}</option>
-                  {% endif %}
-                {% endfor %}
-              </select>
-              <input type="number" name="priority" value="1" min="1" placeholder="Priority" style="width:6rem; margin-bottom:0; height:3rem;">
-              <button type="submit" class="button" style="margin-bottom:0;">Add Backup</button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-{% else %}
-<div class="row">
-  <div class="column">
-    <p><em>No approver relationships configured yet.</em></p>
+    <p>No users with approver or admin permissions found.
+      Grant approver permissions via <a href="{% url 'companies:members' %}">Members</a> first.
+    </p>
   </div>
 </div>
 {% endif %}
 
-<div class="row">
+{% for item in supervisor_data %}
+<div class="row" style="margin-bottom:2rem; border-bottom:1px solid #d1d1d1; padding-bottom:1.5rem;">
   <div class="column">
-    <h3>Assign Approver</h3>
-    {% if employees %}
-    <form method="post" action="{% url 'approvals:assign_approver' %}">
-      {% csrf_token %}
-      <div class="row">
-        <div class="column">
-          <label for="employee_id">Employee</label>
-          <select id="employee_id" name="employee_id" required>
-            <option value="">-- Select employee --</option>
-            {% for emp_membership in employees %}
-            <option value="{{ emp_membership.user.pk }}">
-              {{ emp_membership.user.get_full_name|default:emp_membership.user.username }}
-              ({{ emp_membership.user.email }})
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="column">
-          <label for="primary_approver_id">Primary Approver</label>
-          <select id="primary_approver_id" name="primary_approver_id" required>
-            <option value="">-- Select approver --</option>
-            {% for approver in approver_users %}
-            <option value="{{ approver.pk }}">
-              {{ approver.get_full_name|default:approver.username }}
-              ({{ approver.email }})
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-      <div class="row">
-        <div class="column">
-          {% if not approver_users %}
-          <p class="message message-warning">No users with approver or admin permissions found. Grant approver permissions to users first via <a href="{% url 'companies:members' %}">Members</a>.</p>
-          {% endif %}
-          <button type="submit" class="button" {% if not approver_users %}disabled{% endif %}>Save Relationship</button>
-        </div>
-      </div>
-    </form>
+    <h3>{{ item.supervisor.get_full_name|default:item.supervisor.username }}
+      <small style="font-weight:normal; font-size:0.85em;">({{ item.supervisor.email }})</small>
+    </h3>
+
+    <h4>Assigned Employees</h4>
+    {% if item.assigned_rels %}
+      <table>
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Backup Approvers</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rel in item.assigned_rels %}
+          <tr>
+            <td>{{ rel.employee.get_full_name|default:rel.employee.username }}
+              <small>({{ rel.employee.email }})</small>
+            </td>
+            <td>
+              {% if rel.backup_approvers.all %}
+                <ul style="margin:0; padding-left:1.2rem;">
+                  {% for ba in rel.backup_approvers.all %}
+                    <li>
+                      {{ ba.approver.get_full_name|default:ba.approver.username }}
+                      {% if ba.source_rule %}<small style="color:#888;">(rule)</small>{% endif %}
+                      <form method="post" action="{% url 'approvals:remove_backup_approver' ba.pk %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="button button-outline"
+                                style="padding:0 0.4rem; font-size:0.75rem; height:auto; line-height:1.5; margin:0;">✕</button>
+                      </form>
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <em>None</em>
+              {% endif %}
+              <form method="post" action="{% url 'approvals:add_backup_approver' rel.pk %}"
+                    style="display:flex; gap:0.3rem; align-items:center; flex-wrap:wrap; margin-top:0.3rem;">
+                {% csrf_token %}
+                <select name="backup_approver_id"
+                        style="margin-bottom:0; height:2.5rem; font-size:0.85rem;">
+                  <option value="">+ Manual backup</option>
+                  {% for approver in approver_users %}
+                    {% if approver != rel.employee %}
+                      <option value="{{ approver.pk }}">{{ approver.get_full_name|default:approver.username }}</option>
+                    {% endif %}
+                  {% endfor %}
+                </select>
+                <button type="submit" class="button button-outline"
+                        style="margin-bottom:0; padding:0 0.5rem; height:2.5rem; font-size:0.85rem;">Add</button>
+              </form>
+            </td>
+            <td>
+              <form method="post" action="{% url 'approvals:remove_employee' rel.pk %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="button button-outline button-small"
+                        style="color:#e74c3c; border-color:#e74c3c;">Remove</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     {% else %}
-    <p class="message message-warning">No employees found. Mark users as employees via <a href="{% url 'companies:members' %}">Members</a>.</p>
+      <p><em>No employees assigned yet.</em></p>
     {% endif %}
+
+    {% if item.unassigned %}
+      <form method="post" action="{% url 'approvals:assign_employees' item.supervisor.pk %}"
+            style="margin-top:0.5rem;">
+        {% csrf_token %}
+        <label>Add employees to
+          {{ item.supervisor.get_full_name|default:item.supervisor.username }}
+        </label>
+        <select name="employee_ids" multiple size="5"
+                style="width:100%; max-width:400px;">
+          {% for m in item.unassigned %}
+            <option value="{{ m.user.pk }}">
+              {{ m.user.get_full_name|default:m.user.username }} ({{ m.user.email }})
+            </option>
+          {% endfor %}
+        </select>
+        <small>Hold Ctrl/Cmd to select multiple.</small><br>
+        <button type="submit" class="button button-outline"
+                style="margin-top:0.3rem;">Save Assignments</button>
+      </form>
+    {% else %}
+      <p><em>All employees are already assigned to this supervisor.</em></p>
+    {% endif %}
+
+    <h4 style="margin-top:1rem;">Backup Approver Rules</h4>
+    <p><small>Rules automatically create backup approver entries for every employee under this supervisor,
+      and for future assignments.</small></p>
+    {% if item.rules %}
+      <ul>
+        {% for rule in item.rules %}
+          <li>
+            {{ rule.backup_approver.get_full_name|default:rule.backup_approver.username }}
+            backs up all employees under this supervisor.
+            <form method="post" action="{% url 'approvals:remove_backup_rule' rule.pk %}"
+                  style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="button button-outline"
+                      style="padding:0 0.4rem; font-size:0.75rem; height:auto; line-height:1.5; margin-left:0.4rem;">
+                Remove Rule
+              </button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p><em>No rules configured.</em></p>
+    {% endif %}
+
+    <form method="post" action="{% url 'approvals:add_backup_rule' item.supervisor.pk %}"
+          style="display:flex; gap:0.5rem; align-items:flex-end; flex-wrap:wrap;">
+      {% csrf_token %}
+      <div>
+        <label>Add Rule — Backup Approver</label>
+        <select name="backup_approver_id" required style="margin-bottom:0;">
+          <option value="">— Select backup approver —</option>
+          {% for approver in approver_users %}
+            {% if approver != item.supervisor %}
+              <option value="{{ approver.pk }}">{{ approver.get_full_name|default:approver.username }}</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="button button-outline" style="margin-bottom:0;">Add Rule</button>
+    </form>
+
   </div>
 </div>
+{% endfor %}
 {% endblock %}
