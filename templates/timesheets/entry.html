@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Enter Time — TimeComply{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="column">
+    <h2>Enter Time</h2>
+
+    {% if no_period %}
+      <p class="message message-warning">No active pay period. Please contact your period manager to open a period.</p>
+    {% else %}
+      <p>
+        Period: <strong>{{ period.start_date }} — {{ period.end_date }}</strong>
+        &nbsp;|&nbsp;
+        Status: <strong>{{ timesheet.get_status_display }}</strong>
+        &nbsp;|&nbsp;
+        <a href="{% url 'timesheets:weekly' timesheet.pk %}">View Full Timesheet</a>
+        {% if timesheet.is_editable %}
+          &nbsp;|&nbsp;
+          <a href="{% url 'timesheets:submit_confirm' timesheet.pk %}">Submit Timesheet</a>
+        {% endif %}
+      </p>
+
+      <h3>Entries for {{ entry_date }}</h3>
+
+      {% if today_entries %}
+        <table>
+          <thead>
+            <tr>
+              <th>Labor Category</th>
+              <th>Hours</th>
+              <th>Notes</th>
+              {% if timesheet.is_editable %}<th>Actions</th>{% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in today_entries %}
+              <tr>
+                <td>{{ entry.labor_category.timekeeping_code }} — {{ entry.labor_category.name }}</td>
+                <td>{{ entry.hours }}</td>
+                <td>{{ entry.notes|default:"—" }}</td>
+                {% if timesheet.is_editable %}
+                  <td>
+                    <form method="post" style="display:inline;">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="delete">
+                      <input type="hidden" name="entry_id" value="{{ entry.pk }}">
+                      <button type="submit" class="button button-outline button-small"
+                              onclick="return confirm('Delete this entry?')">Delete</button>
+                    </form>
+                  </td>
+                {% endif %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p>No entries for {{ entry_date }} yet.</p>
+      {% endif %}
+
+      {% if timesheet.is_editable %}
+        <h3>Add Entry</h3>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add">
+          <div class="row">
+            <div class="column">
+              <label for="id_labor_category">{{ form.labor_category.label }} <span style="color:red;">*</span></label>
+              {{ form.labor_category }}
+            </div>
+            <div class="column">
+              <label for="id_date">Date <span style="color:red;">*</span></label>
+              {{ form.date }}
+            </div>
+          </div>
+          <div class="row">
+            <div class="column">
+              <label for="id_hours">Hours <span style="color:red;">*</span></label>
+              {{ form.hours }}
+            </div>
+            <div class="column">
+              <label for="id_notes">Notes</label>
+              {{ form.notes }}
+            </div>
+          </div>
+          <button type="submit" class="button">Add Entry</button>
+        </form>
+      {% else %}
+        <p><em>This timesheet is <strong>{{ timesheet.get_status_display }}</strong> and can no longer be edited.</em></p>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

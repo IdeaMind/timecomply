@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Submit Timesheet — TimeComply{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="column column-60 column-offset-20">
+    <h2>Submit Timesheet</h2>
+
+    <p>
+      Period: <strong>{{ timesheet.period.start_date }} — {{ timesheet.period.end_date }}</strong>
+    </p>
+
+    <blockquote>
+      <p>
+        <em>I certify that the hours recorded on this timesheet are accurate and complete
+        to the best of my knowledge.</em>
+      </p>
+    </blockquote>
+
+    <p>By clicking <strong>Confirm Submission</strong>, you are certifying the accuracy of your
+    time entries for the period <strong>{{ timesheet.period.start_date }} — {{ timesheet.period.end_date }}</strong>.
+    Once submitted, you will no longer be able to edit your entries.</p>
+
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="button">Confirm Submission</button>
+      <a href="{% url 'timesheets:weekly' timesheet.pk %}" class="button button-outline">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}
