@@ -6,6 +6,7 @@ app_name = "timesheets"
 
 urlpatterns = [
     # Time entry
+    path("timesheets/", views.timesheet_list, name="list"),
     path("timesheets/enter/", views.entry_view, name="entry"),
     path("timesheets/<uuid:pk>/", views.weekly_view, name="weekly"),
     path("timesheets/<uuid:pk>/submit/", views.submit_confirm, name="submit_confirm"),

@@ -18,8 +18,9 @@
 
     <p>
       <a href="{% url 'timesheets:entry' %}" class="button button-outline button-small">Enter Time</a>
-      {% if timesheet.is_editable %}
-        <a href="{% url 'timesheets:submit_confirm' timesheet.pk %}" class="button button-small">Submit Timesheet</a>
+      <a href="{% url 'timesheets:list' %}" class="button button-outline button-small">My Timesheets</a>
+      {% if can_submit %}
+        <a href="{% url 'timesheets:submit_confirm' timesheet.pk %}" class="button button-small">Submit for Approval</a>
       {% endif %}
     </p>
 

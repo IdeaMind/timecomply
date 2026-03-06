@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}My Timesheets — TimeComply{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="column">
+    <h2>My Timesheets</h2>
+
+    <p>
+      <a href="{% url 'timesheets:entry' %}" class="button button-outline button-small">Enter Time</a>
+    </p>
+
+    {% if timesheets %}
+      <table>
+        <thead>
+          <tr>
+            <th>Period</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Submitted</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ts in timesheets %}
+            <tr>
+              <td style="white-space:nowrap;">
+                {{ ts.period.start_date }} — {{ ts.period.end_date }}
+              </td>
+              <td>{{ ts.period.get_period_type_display }}</td>
+              <td>
+                {% if ts.status == "draft" %}
+                  <span style="background:#eee; padding:2px 8px; border-radius:3px;">Draft</span>
+                {% elif ts.status == "submitted" %}
+                  <span style="background:#d4edda; color:#155724; padding:2px 8px; border-radius:3px;">Submitted</span>
+                {% elif ts.status == "approved" %}
+                  <span style="background:#cce5ff; color:#004085; padding:2px 8px; border-radius:3px;">Approved</span>
+                {% elif ts.status == "rejected" %}
+                  <span style="background:#f8d7da; color:#721c24; padding:2px 8px; border-radius:3px;">Rejected</span>
+                {% elif ts.status == "locked" %}
+                  <span style="background:#343a40; color:#fff; padding:2px 8px; border-radius:3px;">Locked</span>
+                {% else %}
+                  {{ ts.get_status_display }}
+                {% endif %}
+              </td>
+              <td>{{ ts.submitted_at|date:"N j, Y"|default:"—" }}</td>
+              <td>
+                <a href="{% url 'timesheets:weekly' ts.pk %}">View</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No timesheets found. <a href="{% url 'timesheets:entry' %}">Enter time</a> to get started.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
