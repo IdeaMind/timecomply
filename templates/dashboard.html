@@ -6,10 +6,97 @@
 <div class="row">
   <div class="column">
     <h2>Dashboard</h2>
-    {% if request.company %}
-      <p>Welcome to <strong>{{ request.company.name }}</strong>.</p>
+
+    {% if not is_employee %}
+      <div class="notice">
+        <p>You do not have timesheet requirements for this company.</p>
+        {% if membership %}
+          <p>Based on your roles, you can access:</p>
+          <ul>
+            {% if membership.is_approver or membership.is_admin %}
+              <li><a href="/approvals/">Approval Setup</a></li>
+            {% endif %}
+            {% if membership.is_period_manager or membership.is_admin %}
+              <li><a href="{% url 'timesheets:periods' %}">Pay Periods</a></li>
+            {% endif %}
+            {% if membership.is_admin %}
+              <li><a href="{% url 'companies:settings' %}">Company Settings</a></li>
+              <li><a href="{% url 'companies:members' %}">Members</a></li>
+            {% endif %}
+          </ul>
+        {% else %}
+          <p>You are not a member of any company. <a href="{% url 'companies:register' %}">Register a company</a>.</p>
+        {% endif %}
+      </div>
+
+    {% else %}
+      {# Employee dashboard #}
+      <div class="row">
+        <div class="column">
+          {% if current_period %}
+            <h4>Current Pay Period</h4>
+            <p>{{ current_period.start_date }} — {{ current_period.end_date }}</p>
+
+            <p><strong>Today's hours:</strong> {{ today_hours }}</p>
+
+            {% if current_timesheet %}
+              <p>
+                <strong>Timesheet status:</strong>
+                <span class="badge badge-{{ current_timesheet.status }}">{{ current_timesheet.get_status_display }}</span>
+              </p>
+
+              {% if current_timesheet.status == "rejected" %}
+                <div class="notice notice-warning">
+                  <strong>Timesheet rejected</strong>
+                  {% if current_timesheet.rejection_reason %} — {{ current_timesheet.rejection_reason }}{% endif %}
+                  <form method="post" action="{% url 'timesheets:revise' current_timesheet.pk %}" style="display:inline; margin-left:0.8rem;">
+                    {% csrf_token %}
+                    <button type="submit" class="button button-outline button-small">Revise</button>
+                  </form>
+                </div>
+              {% endif %}
+
+              {% if current_timesheet.status == "draft" %}
+                <p>
+                  <a href="{% url 'timesheets:entry' %}" class="button button-small">Enter Time</a>
+                </p>
+              {% endif %}
+
+            {% else %}
+              <p>No timesheet started yet for this period.</p>
+              <p>
+                <a href="{% url 'timesheets:entry' %}" class="button button-small">Enter Time</a>
+              </p>
+            {% endif %}
+
+          {% else %}
+            <div class="notice notice-warning">
+              <p>No active pay period. Contact your administrator.</p>
+            </div>
+          {% endif %}
+
+          <p>
+            <a href="{% url 'timesheets:list' %}" class="button button-outline button-small">My Timesheets</a>
+          </p>
+        </div>
+      </div>
+
+      {% if rejected_timesheets %}
+        {% for ts in rejected_timesheets %}
+          {% if ts != current_timesheet %}
+            <div class="notice notice-warning">
+              <strong>Action required:</strong> Timesheet for {{ ts.period.start_date }} — {{ ts.period.end_date }} was rejected.
+              {% if ts.rejection_reason %} Reason: {{ ts.rejection_reason }}{% endif %}
+              <form method="post" action="{% url 'timesheets:revise' ts.pk %}" style="display:inline; margin-left:0.8rem;">
+                {% csrf_token %}
+                <button type="submit" class="button button-outline button-small">Revise</button>
+              </form>
+            </div>
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+
     {% endif %}
-    <p>More features coming soon.</p>
   </div>
 </div>
 {% endblock %}

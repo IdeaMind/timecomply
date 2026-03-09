@@ -6,7 +6,7 @@ from django.contrib import admin
 from django.http import HttpResponse
 from django.urls import include, path
 
-from apps.companies.views import dashboard
+from apps.timesheets.views import dashboard
 
 urlpatterns = [
     path("health/", lambda request: HttpResponse("ok")),
