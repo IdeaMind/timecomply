@@ -16,9 +16,12 @@
     <header>
         <nav class="navigation">
             <div class="container">
-                <a href="/" class="navigation-title">TimeComply</a>
+                <a href="/dashboard/" class="navigation-title">TimeComply</a>
                 <ul class="navigation-list">
                     {% if user.is_authenticated %}
+                        <li class="navigation-item"><a href="/dashboard/">Dashboard</a></li>
+                        <li class="navigation-item"><a href="/timesheets/enter/">Enter Time</a></li>
+                        <li class="navigation-item"><a href="/timesheets/">My Timesheets</a></li>
                         <li class="navigation-item"><a href="/accounts/logout/">Logout</a></li>
                     {% else %}
                         <li class="navigation-item"><a href="/accounts/login/">Login</a></li>

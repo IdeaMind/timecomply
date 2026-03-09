@@ -8,6 +8,7 @@
     <h2>My Timesheets</h2>
 
     <p>
+      <a href="/dashboard/" class="button button-outline button-small">Dashboard</a>
       <a href="{% url 'timesheets:entry' %}" class="button button-outline button-small">Enter Time</a>
     </p>
 
@@ -16,7 +17,6 @@
         <thead>
           <tr>
             <th>Period</th>
-            <th>Type</th>
             <th>Status</th>
             <th>Submitted</th>
             <th>Actions</th>
@@ -28,27 +28,30 @@
               <td style="white-space:nowrap;">
                 {{ ts.period.start_date }} — {{ ts.period.end_date }}
               </td>
-              <td>{{ ts.period.get_period_type_display }}</td>
               <td>
-                {% if ts.status == "draft" %}
-                  <span style="background:#eee; padding:2px 8px; border-radius:3px;">Draft</span>
-                {% elif ts.status == "submitted" %}
-                  <span style="background:#d4edda; color:#155724; padding:2px 8px; border-radius:3px;">Submitted</span>
-                {% elif ts.status == "approved" %}
-                  <span style="background:#cce5ff; color:#004085; padding:2px 8px; border-radius:3px;">Approved</span>
-                {% elif ts.status == "rejected" %}
-                  <span style="background:#f8d7da; color:#721c24; padding:2px 8px; border-radius:3px;">Rejected</span>
-                {% elif ts.status == "locked" %}
-                  <span style="background:#343a40; color:#fff; padding:2px 8px; border-radius:3px;">Locked</span>
-                {% else %}
-                  {{ ts.get_status_display }}
-                {% endif %}
+                <span class="badge badge-{{ ts.status }}">{{ ts.get_status_display }}</span>
               </td>
               <td>{{ ts.submitted_at|date:"N j, Y"|default:"—" }}</td>
               <td>
                 <a href="{% url 'timesheets:weekly' ts.pk %}">View</a>
+                {% if ts.status == "rejected" and membership.is_employee %}
+                  &nbsp;
+                  <form method="post" action="{% url 'timesheets:revise' ts.pk %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="button button-outline button-small">Revise</button>
+                  </form>
+                {% endif %}
               </td>
             </tr>
+            {% if ts.status == "rejected" and ts.rejection_reason %}
+              <tr>
+                <td colspan="4">
+                  <div class="notice notice-warning" style="margin:0 0 0.5rem 0; padding:0.5rem 0.8rem;">
+                    <strong>Rejection reason:</strong> {{ ts.rejection_reason }}
+                  </div>
+                </td>
+              </tr>
+            {% endif %}
           {% endfor %}
         </tbody>
       </table>

@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
+from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -103,8 +104,7 @@ def _build_grid(timesheet, period_dates, company, user):
     grid = []
     for cat in all_cats:
         cells = [
-            {"date": d, "entry": entry_map.get(cat, {}).get(d)}
-            for d in period_dates
+            {"date": d, "entry": entry_map.get(cat, {}).get(d)} for d in period_dates
         ]
         row_total = sum(
             c["entry"].hours
@@ -130,6 +130,63 @@ def _build_grid(timesheet, period_dates, company, user):
 
     grand_total = sum(col_totals)
     return grid, col_totals, grand_total, all_cats
+
+
+@login_required
+def dashboard(request):
+    company = request.company
+    membership = getattr(request.user, "membership", None)
+
+    if not membership or not membership.is_employee:
+        return render(
+            request,
+            "dashboard.html",
+            {"membership": membership, "is_employee": False},
+        )
+
+    open_due_periods(company)
+    current_period = get_current_period(company)
+
+    current_timesheet = None
+    today_hours = 0
+    if current_period:
+        try:
+            current_timesheet = Timesheet.objects.get(
+                employee=request.user,
+                period=current_period,
+                company=company,
+            )
+            today_hours = (
+                current_timesheet.entries.filter(date=date.today()).aggregate(
+                    total=Sum("hours")
+                )["total"]
+                or 0
+            )
+        except Timesheet.DoesNotExist:
+            current_timesheet = None
+
+    rejected_timesheets = (
+        Timesheet.objects.filter(
+            employee=request.user,
+            company=company,
+            status="rejected",
+        )
+        .select_related("period")
+        .order_by("-period__start_date")
+    )
+
+    return render(
+        request,
+        "dashboard.html",
+        {
+            "membership": membership,
+            "is_employee": True,
+            "current_period": current_period,
+            "current_timesheet": current_timesheet,
+            "today_hours": today_hours,
+            "rejected_timesheets": rejected_timesheets,
+        },
+    )
 
 
 @login_required
@@ -441,6 +498,7 @@ def submit_confirm(request, pk):
 @login_required
 def timesheet_list(request):
     company = request.company
+    membership = getattr(request.user, "membership", None)
     timesheets = (
         Timesheet.objects.filter(employee=request.user, company=company)
         .select_related("period")
@@ -449,8 +507,35 @@ def timesheet_list(request):
     return render(
         request,
         "timesheets/list.html",
-        {"timesheets": timesheets},
+        {"timesheets": timesheets, "membership": membership},
     )
+
+
+@login_required
+def timesheet_revise(request, pk):
+    company = request.company
+    timesheet = get_object_or_404(
+        Timesheet, pk=pk, company=company, employee=request.user
+    )
+
+    membership = getattr(request.user, "membership", None)
+    if not membership or not membership.is_employee:
+        messages.error(request, "Only employees can revise timesheets.")
+        return redirect("timesheets:list")
+
+    if timesheet.status != "rejected":
+        messages.error(request, "Only rejected timesheets can be revised.")
+        return redirect("timesheets:list")
+
+    if request.method == "POST":
+        timesheet.status = "draft"
+        timesheet.save()
+        messages.success(
+            request, "Timesheet returned to draft. You can now edit and resubmit."
+        )
+        return redirect(f"/timesheets/enter/?period={timesheet.period.pk}")
+
+    return redirect("timesheets:list")
 
 
 # ---------------------------------------------------------------------------
