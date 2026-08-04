@@ -3,144 +3,382 @@
 {% block title %}Enter Time — TimeComply{% endblock %}
 
 {% block content %}
-<div class="row">
-  <div class="column">
-    <h2>Enter Time</h2>
+<style>
+  /* ── Spreadsheet grid ── */
+  .ts-grid-wrap { overflow-x: auto; }
 
-    {% if no_period %}
-      <p>No active pay period. Please contact your period manager to open a period.</p>
+  .ts-grid {
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    min-width: 100%;
+  }
+
+  .ts-grid th,
+  .ts-grid td {
+    border: 1px solid #ccc;
+    padding: 0;
+  }
+
+  .ts-grid thead th {
+    background: #f5f5f5;
+    font-weight: 600;
+    text-align: center;
+    padding: 0.3rem 0.5rem;
+    white-space: nowrap;
+  }
+
+  .ts-grid thead th.col-label { text-align: left; min-width: 14rem; }
+
+  .ts-grid tfoot th {
+    background: #f0f0f0;
+    font-weight: 700;
+    text-align: center;
+    padding: 0.3rem 0.5rem;
+  }
+
+  .ts-grid tfoot th.col-label { text-align: left; }
+
+  .ts-grid tbody td.row-label {
+    padding: 0.3rem 0.6rem;
+    white-space: nowrap;
+    background: #fafafa;
+    font-size: 0.8rem;
+  }
+
+  .ts-grid tbody td.row-total {
+    text-align: center;
+    padding: 0.3rem 0.5rem;
+    font-weight: 600;
+    background: #fafafa;
+  }
+
+  /* Cell inputs */
+  .ts-grid .cell-input {
+    display: block;
+    width: 4.2rem;
+    border: none;
+    outline: none;
+    background: transparent;
+    text-align: right;
+    font-size: 0.85rem;
+    font-family: inherit;
+    padding: 0.3rem 0.4rem;
+    box-sizing: border-box;
+    /* hide browser spinners */
+    -moz-appearance: textfield;
+  }
+  .ts-grid .cell-input::-webkit-outer-spin-button,
+  .ts-grid .cell-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  .ts-grid td.cell-wrap { padding: 0; }
+
+  /* Focused cell highlight */
+  .ts-grid td.cell-wrap:focus-within {
+    outline: 2px solid #0074d9;
+    outline-offset: -2px;
+    background: #e8f4ff;
+  }
+
+  .ts-grid td.cell-wrap.cell-dirty {
+    background: #fffbe6;
+  }
+  .ts-grid td.cell-wrap.cell-dirty:focus-within {
+    background: #fff5cc;
+  }
+
+  /* Readonly display cells */
+  .ts-grid td.cell-readonly {
+    text-align: right;
+    padding: 0.3rem 0.5rem;
+    color: #333;
+  }
+
+  /* Weekend columns subtle tint */
+  .ts-grid .weekend { background: #f9f9f9; }
+
+  /* ── Toolbar ── */
+  .ts-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.6rem;
+  }
+
+  .ts-status {
+    font-size: 0.82rem;
+    color: #555;
+    margin-left: auto;
+  }
+
+  /* ── Add row panel ── */
+  .add-row-panel {
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+  }
+  .add-row-panel select { margin-bottom: 0; font-size: 0.85rem; }
+  .add-row-panel .button { margin-bottom: 0; padding: 0.4rem 0.8rem; font-size: 0.82rem; }
+
+  /* Dirty-state save notice */
+  #dirty-notice {
+    display: none;
+    font-size: 0.8rem;
+    color: #b8860b;
+    margin-left: 0.5rem;
+  }
+  #dirty-notice.visible { display: inline; }
+</style>
+
+<h2>Enter Time</h2>
+
+{% if no_period %}
+  <p>No active pay period. Please contact your period manager to open a period.</p>
+{% else %}
+
+  {# ── Toolbar ── #}
+  <div class="ts-toolbar">
+    {% if prev_period %}
+      <a href="{% url 'timesheets:entry' %}?period={{ prev_period.pk }}" class="button button-outline button-small">&larr; Prev</a>
     {% else %}
-
-      {# Navigation #}
-      <p>
-        {% if prev_period %}
-          <a href="{% url 'timesheets:entry' %}?period={{ prev_period.pk }}" class="button button-outline button-small">&larr; Previous</a>
-        {% else %}
-          <button class="button button-outline button-small" disabled>&larr; Previous</button>
-        {% endif %}
-
-        <a href="{% url 'timesheets:entry' %}" class="button button-outline button-small">Current</a>
-
-        {% if next_period %}
-          <a href="{% url 'timesheets:entry' %}?period={{ next_period.pk }}" class="button button-outline button-small">Next &rarr;</a>
-        {% else %}
-          <button class="button button-outline button-small" disabled>Next &rarr;</button>
-        {% endif %}
-      </p>
-
-      {# Period info #}
-      <p>
-        Period: <strong>{{ period.start_date }} — {{ period.end_date }}</strong>
-        &nbsp;|&nbsp;
-        Status: <strong>{{ period.get_status_display }}</strong>
-        &nbsp;|&nbsp;
-        Timesheet: <strong>{{ timesheet.get_status_display }}</strong>
-        {% if can_submit %}
-          &nbsp;|&nbsp;
-          <a href="{% url 'timesheets:submit_confirm' timesheet.pk %}">Submit for Approval</a>
-        {% endif %}
-        &nbsp;|&nbsp;
-        <a href="{% url 'timesheets:preset_manage' %}">Manage Presets</a>
-      </p>
-
-      {% if read_only %}
-        <p><em>
-          {% if period.status == "future" %}
-            This period has not started yet — editing is disabled.
-          {% elif period.status == "closed" %}
-            This period is closed — editing is disabled.
-          {% else %}
-            This timesheet is <strong>{{ timesheet.get_status_display }}</strong> and can no longer be edited.
-          {% endif %}
-        </em></p>
-      {% endif %}
-
-      {# Weekly grid #}
-      <form method="post">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="save_grid">
-        {% for row in grid %}
-          <input type="hidden" name="category_ids" value="{{ row.category.pk }}">
-        {% endfor %}
-
-        <div style="overflow-x: auto;">
-          <table>
-            <thead>
-              <tr>
-                <th>Labor Category</th>
-                {% for d in period_dates %}
-                  <th style="text-align:center; white-space:nowrap;">{{ d|date:"D" }}<br>{{ d|date:"m/d" }}</th>
-                {% endfor %}
-                <th style="text-align:center;">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for row in grid %}
-                <tr>
-                  <td style="white-space:nowrap;">{{ row.category.timekeeping_code }} — {{ row.category.name }}</td>
-                  {% for cell in row.cells %}
-                    <td style="text-align:center; padding: 0.2rem;">
-                      {% if read_only %}
-                        {{ cell.entry.hours|default:"—" }}
-                      {% else %}
-                        <input type="number"
-                               name="hours_{{ row.category.pk }}_{{ cell.date|date:'Y-m-d' }}"
-                               value="{{ cell.entry.hours|default:'' }}"
-                               step="0.25" min="0" max="24"
-                               style="width:4.5rem; text-align:center; padding:0.2rem;">
-                      {% endif %}
-                    </td>
-                  {% endfor %}
-                  <td style="text-align:center;"><strong>{{ row.total }}</strong></td>
-                </tr>
-              {% empty %}
-                <tr><td colspan="99" style="text-align:center;"><em>No labor categories yet. Add one below or <a href="{% url 'timesheets:preset_manage' %}">manage presets</a>.</em></td></tr>
-              {% endfor %}
-            </tbody>
-            <tfoot>
-              <tr>
-                <th>Daily Total</th>
-                {% for total in col_totals %}
-                  <th style="text-align:center;">{{ total }}</th>
-                {% endfor %}
-                <th style="text-align:center;">{{ grand_total }}</th>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        {% if not read_only %}
-          <p style="margin-top: 0.5rem;">
-            <button type="submit" class="button">Save Timesheet</button>
-          </p>
-        {% endif %}
-      </form>
-
-      {# Add Row form — only when editing is enabled #}
-      {% if not read_only %}
-        <div style="margin-top:1rem; padding:1rem; border:1px solid #d1d1d1; border-radius:4px;">
-          <strong>Add Labor Category Row</strong>
-          {% if available_cats %}
-            <form method="post" style="display:flex; gap:0.5rem; align-items:flex-end; flex-wrap:wrap; margin-top:0.5rem;">
-              {% csrf_token %}
-              <input type="hidden" name="action" value="add_row">
-              <div>
-                <select id="add_category_id" name="add_category_id" required style="margin-bottom:0;">
-                  <option value="">— Select category —</option>
-                  {% for cat in available_cats %}
-                    <option value="{{ cat.pk }}">{{ cat.timekeeping_code }} — {{ cat.name }}</option>
-                  {% endfor %}
-                </select>
-              </div>
-              <button type="submit" class="button button-outline" style="margin-bottom:0;">Add Row</button>
-            </form>
-          {% else %}
-            <p style="margin:0.5rem 0 0;"><em>All available labor categories are already on your timesheet.</em></p>
-          {% endif %}
-        </div>
-      {% endif %}
-
+      <button class="button button-outline button-small" disabled>&larr; Prev</button>
     {% endif %}
+
+    <a href="{% url 'timesheets:entry' %}" class="button button-outline button-small">Current</a>
+
+    {% if next_period %}
+      <a href="{% url 'timesheets:entry' %}?period={{ next_period.pk }}" class="button button-outline button-small">Next &rarr;</a>
+    {% else %}
+      <button class="button button-outline button-small" disabled>Next &rarr;</button>
+    {% endif %}
+
+    <span class="ts-status">
+      <strong>{{ period.start_date }} — {{ period.end_date }}</strong>
+      &nbsp;&middot;&nbsp;
+      Period: <strong>{{ period.get_status_display }}</strong>
+      &nbsp;&middot;&nbsp;
+      Timesheet: <strong>{{ timesheet.get_status_display }}</strong>
+    </span>
   </div>
-</div>
+
+  {% if read_only %}
+    <p><em>
+      {% if period.status == "future" %}This period has not started yet — editing is disabled.
+      {% elif period.status == "closed" %}This period is closed — editing is disabled.
+      {% else %}This timesheet is <strong>{{ timesheet.get_status_display }}</strong> and can no longer be edited.
+      {% endif %}
+    </em></p>
+  {% endif %}
+
+  {# ── Grid ── #}
+  <form method="post" id="ts-form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="save_grid">
+    {% for row in grid %}
+      <input type="hidden" name="category_ids" value="{{ row.category.pk }}">
+    {% endfor %}
+
+    <div class="ts-grid-wrap">
+      <table class="ts-grid">
+        <thead>
+          <tr>
+            <th class="col-label">Labor Category</th>
+            {% for d in period_dates %}
+              <th{% if d.weekday >= 5 %} class="weekend"{% endif %}>
+                {{ d|date:"D" }}<br>{{ d|date:"m/d" }}
+              </th>
+            {% endfor %}
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in grid %}
+            <tr>
+              <td class="row-label">{{ row.category.timekeeping_code }} — {{ row.category.name }}</td>
+              {% for cell in row.cells %}
+                {% if read_only %}
+                  <td class="cell-readonly{% if cell.date.weekday >= 5 %} weekend{% endif %}">{{ cell.entry.hours|default:"" }}</td>
+                {% else %}
+                  <td class="cell-wrap{% if cell.date.weekday >= 5 %} weekend{% endif %}">
+                    <input class="cell-input"
+                           type="number"
+                           name="hours_{{ row.category.pk }}_{{ cell.date|date:'Y-m-d' }}"
+                           value="{{ cell.entry.hours|default:'' }}"
+                           step="0.25" min="0" max="24"
+                           autocomplete="off"
+                           data-original="{{ cell.entry.hours|default:'' }}">
+                  </td>
+                {% endif %}
+              {% endfor %}
+              <td class="row-total">{{ row.total|default:"" }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="99" style="padding:0.8rem; text-align:center; color:#777;">
+                <em>No labor categories yet. Add one below or <a href="{% url 'timesheets:preset_manage' %}">manage presets</a>.</em>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th class="col-label">Daily Total</th>
+            {% for total in col_totals %}
+              <th>{{ total|default:"" }}</th>
+            {% endfor %}
+            <th>{{ grand_total|default:"" }}</th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    {% if not read_only %}
+      <div style="margin-top:0.7rem; display:flex; align-items:center; gap:0.8rem; flex-wrap:wrap;">
+        <button type="submit" class="button" id="save-btn">Save</button>
+        <span id="dirty-notice">Unsaved changes</span>
+        {% if can_submit %}
+          <a href="{% url 'timesheets:submit_confirm' timesheet.pk %}" class="button button-outline" style="margin-left:auto;">Submit for Approval &rarr;</a>
+        {% endif %}
+      </div>
+    {% else %}
+      {% if can_submit %}
+        <div style="margin-top:0.7rem;">
+          <a href="{% url 'timesheets:submit_confirm' timesheet.pk %}" class="button">Submit for Approval &rarr;</a>
+        </div>
+      {% endif %}
+    {% endif %}
+  </form>
+
+  {# ── Add Row ── #}
+  {% if not read_only %}
+    <div class="add-row-panel">
+      {% if available_cats %}
+        <form method="post" style="display:contents;">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add_row">
+          <select name="add_category_id" required>
+            <option value="">— Add labor category —</option>
+            {% for cat in available_cats %}
+              <option value="{{ cat.pk }}">{{ cat.timekeeping_code }} — {{ cat.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="button button-outline">Add Row</button>
+        </form>
+      {% else %}
+        <em style="color:#777;">All available labor categories are on your timesheet.</em>
+      {% endif %}
+      <a href="{% url 'timesheets:preset_manage' %}" style="font-size:0.8rem; color:#777;">Manage presets</a>
+    </div>
+  {% endif %}
+
+{% endif %}
+
+{% if not read_only %}
+<script>
+(function () {
+  // Build a 2-D array of all cell inputs: grid[row][col]
+  const tbody = document.querySelector('.ts-grid tbody');
+  if (!tbody) return;
+
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const grid = rows.map(tr =>
+    Array.from(tr.querySelectorAll('input.cell-input'))
+  ).filter(r => r.length > 0);
+
+  if (!grid.length) return;
+
+  const nRows = grid.length;
+  const nCols = grid[0].length;
+
+  function cellOf(input) {
+    for (let r = 0; r < nRows; r++)
+      for (let c = 0; c < nCols; c++)
+        if (grid[r][c] === input) return [r, c];
+    return null;
+  }
+
+  function focus(r, c) {
+    r = Math.max(0, Math.min(nRows - 1, r));
+    c = Math.max(0, Math.min(nCols - 1, c));
+    const inp = grid[r][c];
+    inp.focus();
+    // select all so typing replaces the value immediately
+    inp.select();
+  }
+
+  // Dirty-state tracking
+  const dirtyNotice = document.getElementById('dirty-notice');
+  let dirty = false;
+
+  function markDirty(input) {
+    if (!dirty) {
+      dirty = true;
+      dirtyNotice.classList.add('visible');
+    }
+    const td = input.closest('td');
+    if (td && input.value !== input.dataset.original) {
+      td.classList.add('cell-dirty');
+    } else if (td) {
+      td.classList.remove('cell-dirty');
+    }
+  }
+
+  grid.flat().forEach(inp => {
+    // Mark dirty on any change
+    inp.addEventListener('input', () => markDirty(inp));
+
+    inp.addEventListener('keydown', e => {
+      const pos = cellOf(inp);
+      if (!pos) return;
+      let [r, c] = pos;
+
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault();
+          focus(r - 1, c);
+          break;
+        case 'ArrowDown':
+        case 'Enter':
+          e.preventDefault();
+          focus(r + 1, c);
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          focus(r, c - 1);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          focus(r, c + 1);
+          break;
+        case 'Tab':
+          e.preventDefault();
+          if (e.shiftKey) {
+            if (c > 0) focus(r, c - 1);
+            else focus(r - 1, nCols - 1);
+          } else {
+            if (c < nCols - 1) focus(r, c + 1);
+            else focus(r + 1, 0);
+          }
+          break;
+      }
+    });
+
+    // Select all on focus so the first keystroke replaces the value
+    inp.addEventListener('focus', () => inp.select());
+  });
+
+  // Ctrl+S / Cmd+S shortcut to save
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      document.getElementById('ts-form').requestSubmit();
+    }
+  });
+})();
+</script>
+{% endif %}
+
 {% endblock %}

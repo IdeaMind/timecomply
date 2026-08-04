@@ -4,20 +4,19 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('companies', '0004_replace_role_with_flags'),
+        ("companies", "0004_replace_role_with_flags"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='company',
-            name='auto_close_hours',
+            model_name="company",
+            name="auto_close_hours",
             field=models.PositiveIntegerField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='company',
-            name='auto_open',
+            model_name="company",
+            name="auto_open",
             field=models.BooleanField(default=False),
         ),
     ]

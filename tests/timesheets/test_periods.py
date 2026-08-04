@@ -332,3 +332,108 @@ def test_unauthenticated_user_cannot_access_periods():
     response = client.get("/periods/")
     assert response.status_code == 302
     assert "/accounts/login/" in response["Location"]
+
+
+# ---------------------------------------------------------------------------
+# period_list with suggested start date
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_period_list_shows_suggested_start(company, admin_user):
+    """When periods exist, the list page shows a suggested next start date."""
+    make_period(company, date(2025, 1, 6), date(2025, 1, 12), status="open")
+    client = Client()
+    client.force_login(admin_user)
+    response = client.get("/periods/")
+    assert response.status_code == 200
+    assert b"2025-01-13" in response.content
+
+
+# ---------------------------------------------------------------------------
+# period_close — edge cases
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_period_close_already_closed_shows_error(company, admin_user):
+    """Closing an already-closed period redirects with an error."""
+    period = make_period(company, date(2025, 1, 6), date(2025, 1, 12), status="closed")
+    client = Client()
+    client.force_login(admin_user)
+    response = client.post(f"/periods/{period.pk}/close/")
+    assert response.status_code == 302
+    period.refresh_from_db()
+    assert period.status == "closed"
+
+
+# ---------------------------------------------------------------------------
+# period_open — edge cases
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_period_open_already_open_shows_error(company, admin_user):
+    """Opening an already-open period redirects with an error."""
+    period = make_period(company, date(2025, 1, 6), date(2025, 1, 12), status="open")
+    client = Client()
+    client.force_login(admin_user)
+    response = client.post(f"/periods/{period.pk}/open/")
+    assert response.status_code == 302
+    period.refresh_from_db()
+    assert period.status == "open"
+
+
+# ---------------------------------------------------------------------------
+# period_delete view
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_period_delete_get_shows_confirm_page(company, admin_user):
+    """GET /periods/<pk>/delete/ renders the confirmation page."""
+    period = make_period(company, date(2025, 1, 6), date(2025, 1, 12), status="future")
+    client = Client()
+    client.force_login(admin_user)
+    response = client.get(f"/periods/{period.pk}/delete/")
+    assert response.status_code == 200
+    assert b"delete" in response.content.lower()
+
+
+@pytest.mark.django_db
+def test_period_delete_post_deletes_period_without_timesheets(company, admin_user):
+    """POST to delete a period with no timesheets succeeds."""
+    period = make_period(company, date(2025, 1, 6), date(2025, 1, 12), status="future")
+    client = Client()
+    client.force_login(admin_user)
+    response = client.post(f"/periods/{period.pk}/delete/")
+    assert response.status_code == 302
+    assert not TimePeriod.objects.filter(pk=period.pk).exists()
+
+
+@pytest.mark.django_db
+def test_period_delete_blocked_when_timesheets_exist(company, admin_user):
+    """POST to delete a period that has timesheets is blocked."""
+    from tests.companies.factories import CompanyMembershipFactory, UserFactory
+    from tests.timesheets.factories import TimesheetFactory
+
+    period = make_period(company, date(2025, 1, 6), date(2025, 1, 12), status="open")
+    emp = UserFactory()
+    CompanyMembershipFactory(user=emp, company=company, is_employee=True)
+    TimesheetFactory(employee=emp, company=company, period=period)
+
+    client = Client()
+    client.force_login(admin_user)
+    response = client.post(f"/periods/{period.pk}/delete/")
+    assert response.status_code == 302
+    assert TimePeriod.objects.filter(pk=period.pk).exists()
+
+
+@pytest.mark.django_db
+def test_period_create_missing_start_date(company, admin_user):
+    """POSTing period_create without a start date shows an error."""
+    client = Client()
+    client.force_login(admin_user)
+    response = client.post("/periods/create/", {})
+    assert response.status_code == 302
+    assert TimePeriod.objects.filter(company=company).count() == 0

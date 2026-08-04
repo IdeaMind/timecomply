@@ -407,3 +407,123 @@ def test_timesheet_list_requires_login():
     response = client.get("/timesheets/")
     assert response.status_code == 302
     assert "/accounts/login/" in response["Location"]
+
+
+# ---------------------------------------------------------------------------
+# add_row action in entry_view
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_add_row_adds_preset_and_redirects(company, employee, period, project):
+    """POSTing add_row adds an EmployeePreset for the selected category."""
+    from apps.timesheets.models import EmployeePreset
+
+    client = Client()
+    client.force_login(employee)
+    response = client.post(
+        "/timesheets/enter/",
+        {"action": "add_row", "add_category_id": str(project.pk)},
+    )
+    assert response.status_code == 302
+    assert EmployeePreset.objects.filter(
+        company=company, employee=employee, labor_category=project
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_add_row_invalid_category_shows_error(company, employee, period):
+    """POSTing add_row with a bad category ID redirects without crashing."""
+    client = Client()
+    client.force_login(employee)
+    response = client.post(
+        "/timesheets/enter/",
+        {
+            "action": "add_row",
+            "add_category_id": "00000000-0000-0000-0000-000000000000",
+        },
+    )
+    assert response.status_code == 302
+
+
+# ---------------------------------------------------------------------------
+# preset_manage view
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_preset_manage_get(company, employee, project):
+    """GET /timesheets/presets/ renders the preset management page."""
+    client = Client()
+    client.force_login(employee)
+    response = client.get("/timesheets/presets/")
+    assert response.status_code == 200
+    assert b"Preset" in response.content
+
+
+@pytest.mark.django_db
+def test_preset_manage_add(company, employee, project):
+    """POST add action adds a preset."""
+    from apps.timesheets.models import EmployeePreset
+
+    client = Client()
+    client.force_login(employee)
+    response = client.post(
+        "/timesheets/presets/",
+        {"action": "add", "category_id": str(project.pk)},
+    )
+    assert response.status_code == 302
+    assert EmployeePreset.objects.filter(
+        company=company, employee=employee, labor_category=project
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_preset_manage_remove(company, employee, project):
+    """POST remove action deletes the preset."""
+    from apps.timesheets.models import EmployeePreset
+
+    EmployeePreset.objects.create(
+        company=company, employee=employee, labor_category=project
+    )
+    client = Client()
+    client.force_login(employee)
+    response = client.post(
+        "/timesheets/presets/",
+        {"action": "remove", "category_id": str(project.pk)},
+    )
+    assert response.status_code == 302
+    assert not EmployeePreset.objects.filter(
+        company=company, employee=employee, labor_category=project
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_preset_manage_requires_login():
+    client = Client()
+    response = client.get("/timesheets/presets/")
+    assert response.status_code == 302
+    assert "/accounts/login/" in response["Location"]
+
+
+# ---------------------------------------------------------------------------
+# weekly_view — approver can view another employee's timesheet
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+def test_weekly_view_approver_can_view_other_employee(company, period):
+    """An approver can view a timesheet belonging to another employee."""
+    from tests.companies.factories import CompanyMembershipFactory, UserFactory
+
+    emp = UserFactory()
+    CompanyMembershipFactory(user=emp, company=company, is_employee=True)
+    approver = UserFactory()
+    CompanyMembershipFactory(user=approver, company=company, is_approver=True)
+
+    timesheet = TimesheetFactory(employee=emp, company=company, period=period)
+
+    client = Client()
+    client.force_login(approver)
+    response = client.get(f"/timesheets/{timesheet.pk}/")
+    assert response.status_code == 200

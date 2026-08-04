@@ -2,7 +2,6 @@ from datetime import date, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -20,23 +19,6 @@ PERIOD_TYPE_CHOICES = [
 ]
 
 _ACCESS_DENIED_MSG = "Only period managers and admins can manage pay periods."
-
-
-def _notify_approver(timesheet, approver, request):
-    """Send an email to the approver when a timesheet is submitted."""
-    employee_name = timesheet.employee.get_full_name() or timesheet.employee.username
-    period = timesheet.period
-    subject = f"[TimeComply] Timesheet pending approval: {employee_name}"
-    timesheet_url = request.build_absolute_uri(f"/timesheets/{timesheet.pk}/")
-    body = (
-        f"Hello {approver.get_full_name() or approver.username},\n\n"
-        f"{employee_name} has submitted a timesheet for the period "
-        f"{period.start_date} \u2014 {period.end_date} and it is awaiting your"
-        " approval.\n\n"
-        f"View timesheet: {timesheet_url}\n\n"
-        f"\u2014 TimeComply"
-    )
-    send_mail(subject, body, None, [approver.email], fail_silently=True)
 
 
 def _can_manage_periods(user, company):
@@ -103,8 +85,7 @@ def _build_grid(timesheet, period_dates, company, user):
     grid = []
     for cat in all_cats:
         cells = [
-            {"date": d, "entry": entry_map.get(cat, {}).get(d)}
-            for d in period_dates
+            {"date": d, "entry": entry_map.get(cat, {}).get(d)} for d in period_dates
         ]
         row_total = sum(
             c["entry"].hours
@@ -427,7 +408,6 @@ def submit_confirm(request, pk):
         timesheet.status = "submitted"
         timesheet.submitted_at = timezone.now()
         timesheet.save(update_fields=["status", "submitted_at", "updated_at"])
-        _notify_approver(timesheet, approver, request)
         messages.success(request, "Timesheet submitted successfully.")
         return redirect("timesheets:entry")
 

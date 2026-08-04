@@ -148,9 +148,7 @@ def assign_employees(request, supervisor_pk):
 
     if added:
         sup_name = supervisor.get_full_name() or supervisor.username
-        messages.success(
-            request, f"{added} employee(s) assigned to {sup_name}."
-        )
+        messages.success(request, f"{added} employee(s) assigned to {sup_name}.")
     return redirect("approvals:setup")
 
 

@@ -22,9 +22,7 @@ class Command(BaseCommand):
 
         closed_count = 0
         for company in companies:
-            open_periods = TimePeriod.objects.filter(
-                company=company, status="open"
-            )
+            open_periods = TimePeriod.objects.filter(company=company, status="open")
             for period in open_periods:
                 if self._should_auto_close(period, company.auto_close_hours):
                     period.status = "closed"
@@ -38,9 +36,7 @@ class Command(BaseCommand):
                     )
 
         self.stdout.write(
-            self.style.SUCCESS(
-                f"Auto-close complete. Closed {closed_count} period(s)."
-            )
+            self.style.SUCCESS(f"Auto-close complete. Closed {closed_count} period(s).")
         )
 
     def _should_auto_close(self, period, auto_close_hours):
